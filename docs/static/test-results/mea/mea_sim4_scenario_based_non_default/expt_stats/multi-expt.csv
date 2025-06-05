@@ -1,0 +1,13 @@
+variant,freq,prop
+"('control', 'control')",131,13.30
+"('control', 'enabled')",118,11.98
+"('control', 'nan')",31,3.15
+"('nan', 'control')",49,4.97
+"('nan', 'enabled')",62,6.29
+"('nan', 'nan')",5,0.51
+"('v1', 'control')",132,13.40
+"('v1', 'enabled')",129,13.10
+"('v1', 'nan')",42,4.26
+"('v2', 'control')",123,12.49
+"('v2', 'enabled')",116,11.78
+"('v2', 'nan')",47,4.77

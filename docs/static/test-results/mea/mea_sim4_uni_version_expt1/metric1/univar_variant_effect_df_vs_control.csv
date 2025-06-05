@@ -1,0 +1,3 @@
+expt,comparison_pair,delta,delta_percent,ci,ci_percent,delta_std,delta_sum,delta_sum_ci,z_value,p_value,sample_counts,impacted_counts
+expt_0,"('v1', 'control')",6.49,167.50,"(5.6, 7.37)","(144.58, 190.42)",0.45,,,14.32,0.00,"(282, 304)","(None, None)"
+expt_0,"('v2', 'control')",-0.75,-19.36,"(-1.11, -0.39)","(-28.61, -10.11)",0.18,,,-4.10,0.00,"(282, 285)","(None, None)"

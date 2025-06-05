@@ -1,0 +1,289 @@
+
+Population Summary:
+{'Level Proportion': {'Senior': 0.503, 'Junior': 0.497}, 'Country Proportion': {'US': 0.408, 'Canada': 0.296, 'UK': 0.205, 'Iran': 0.091}, 'Device Proportion': {'Smartphone': 0.621, 'Tablet': 0.282, 'Laptop': 0.097}}
+
+sim.population_df:
+     memberid   Level Country      Device
+0           1  Junior    Iran      Tablet
+1           2  Senior      UK  Smartphone
+2           3  Junior  Canada      Laptop
+3           4  Junior  Canada      Tablet
+4           5  Senior      US  Smartphone
+..        ...     ...     ...         ...
+995       996  Senior      US  Smartphone
+996       997  Junior  Canada      Tablet
+997       998  Senior  Canada  Smartphone
+998       999  Junior      US      Laptop
+999      1000  Senior      UK  Smartphone
+
+[1000 rows x 4 columns]
+
+expt_data_list (one by one):
+
+
+expt_df 0:
+     memberid   Level Country      Device  variant
+945       946  Senior      US  Smartphone       v2
+452       453  Junior      US      Tablet       v2
+304       305  Junior      US  Smartphone       v2
+433       434  Junior  Canada  Smartphone  control
+864       865  Senior      US  Smartphone  control
+..        ...     ...     ...         ...      ...
+377       378  Senior      US      Tablet  control
+309       310  Senior      US      Tablet       v2
+410       411  Junior      US      Tablet       v1
+571       572  Junior      UK  Smartphone       v1
+455       456  Senior    Iran  Smartphone       v1
+
+[900 rows x 5 columns]
+
+summary 0:
+{'control': 0.37222222222222223, 'v1': 0.31333333333333335, 'v2': 0.28, 'nan': 0.034444444444444444}
+
+expt_df.shape 0:
+(900, 5)
+
+expt_df 1:
+     memberid   Level Country      Device  variant
+786       787  Junior  Canada      Tablet  enabled
+499       500  Junior      US  Smartphone  control
+930       931  Senior      US  Smartphone  enabled
+217       218  Senior      UK      Laptop  enabled
+803       804  Junior      US  Smartphone  control
+..        ...     ...     ...         ...      ...
+782       783  Senior  Canada      Tablet  enabled
+830       831  Junior      UK  Smartphone  enabled
+291       292  Senior      US      Tablet  control
+43         44  Senior      US      Laptop  control
+430       431  Junior      US      Tablet  enabled
+
+[900 rows x 5 columns]
+
+summary 1:
+{'enabled': 0.6722222222222223, 'control': 0.2833333333333333, 'nan': 0.044444444444444446}
+
+expt_df.shape 1:
+(900, 5)
+
+expt_df 2:
+     memberid   Level Country      Device  variant
+800       801  Junior      US      Laptop  enabled
+773       774  Junior      US  Smartphone  enabled
+23         24  Junior      UK  Smartphone  control
+819       820  Senior      US      Laptop  control
+486       487  Senior      US      Tablet  enabled
+..        ...     ...     ...         ...      ...
+112       113  Senior      US  Smartphone  control
+865       866  Junior      US  Smartphone  enabled
+247       248  Senior  Canada      Tablet  enabled
+52         53  Junior  Canada  Smartphone  control
+695       696  Junior      UK  Smartphone  enabled
+
+[900 rows x 5 columns]
+
+summary 2:
+{'enabled': 0.6666666666666666, 'control': 0.28, 'nan': 0.05333333333333334}
+
+expt_df.shape 2:
+(900, 5)
+
+merged expt df (sim.expt_df):
+     memberid   Level Country  ... variant_2 variant_3                      variant
+0           1  Junior    Iran  ...   enabled   control       (v2, enabled, control)
+1           2  Senior      UK  ...   enabled   control      (nan, enabled, control)
+2           3  Junior  Canada  ...       nan   enabled      (control, nan, enabled)
+3           4  Junior  Canada  ...   enabled   enabled  (control, enabled, enabled)
+4           5  Senior      US  ...   control   enabled       (v1, control, enabled)
+..        ...     ...     ...  ...       ...       ...                          ...
+995       996  Senior      US  ...   control   enabled       (v1, control, enabled)
+996       997  Junior  Canada  ...   control   enabled  (control, control, enabled)
+997       998  Senior  Canada  ...   enabled   enabled       (v1, enabled, enabled)
+998       999  Junior      US  ...   enabled   enabled  (control, enabled, enabled)
+999      1000  Senior      UK  ...   enabled       nan           (v2, enabled, nan)
+
+[1000 rows x 8 columns]
+
+sim.expt_df.shape:
+(1000, 8)
+
+sim.expt_df_summary:
+{('control', 'enabled', 'enabled'): 0.122, ('v1', 'enabled', 'enabled'): 0.099, ('v2', 'enabled', 'enabled'): 0.082, ('control', 'control', 'enabled'): 0.054, ('control', 'enabled', 'control'): 0.053, ('v1', 'control', 'enabled'): 0.048, ('v1', 'enabled', 'control'): 0.044, ('v2', 'control', 'enabled'): 0.042, ('nan', 'enabled', 'enabled'): 0.04, ('control', 'enabled', 'nan'): 0.04, ('v2', 'enabled', 'control'): 0.039, ('v2', 'nan', 'enabled'): 0.033, ('v1', 'enabled', 'nan'): 0.029, ('nan', 'enabled', 'control'): 0.025, ('nan', 'control', 'enabled'): 0.024, ('control', 'nan', 'enabled'): 0.024, ('v1', 'nan', 'enabled'): 0.021, ('v2', 'control', 'control'): 0.019, ('control', 'control', 'control'): 0.018, ('v2', 'enabled', 'nan'): 0.018, ('v1', 'control', 'control'): 0.015, ('nan', 'enabled', 'nan'): 0.014, ('control', 'nan', 'control'): 0.012, ('nan', 'nan', 'enabled'): 0.011, ('v1', 'control', 'nan'): 0.011, ('v1', 'nan', 'control'): 0.009, ('v2', 'control', 'nan'): 0.009, ('nan', 'nan', 'control'): 0.008, ('control', 'control', 'nan'): 0.007, ('v1', 'nan', 'nan'): 0.006, ('control', 'nan', 'nan'): 0.005, ('v2', 'nan', 'nan'): 0.005, ('nan', 'control', 'control'): 0.005, ('v2', 'nan', 'control'): 0.005, ('nan', 'control', 'nan'): 0.003, ('nan', 'nan', 'nan'): 0.001}
+
+baseline expt metric df, sim.expt_metric_baseline_df:
+   memberid   Level Country  ...                      variant metric1 metric2
+0         1  Junior    Iran  ...       (v2, enabled, control)    10.0     0.0
+1         2  Senior      UK  ...      (nan, enabled, control)     2.0     0.0
+2         3  Junior  Canada  ...      (control, nan, enabled)     5.0     2.0
+3         4  Junior  Canada  ...  (control, enabled, enabled)     5.0     2.0
+4         5  Senior      US  ...       (v1, control, enabled)     2.0     0.0
+
+[5 rows x 10 columns]
+
+sim.expt_metric_df.shape:
+(1000, 10)
+
+mean_attribute_metric_baseline_df:
+                           metric1  metric2
+Level  Country Device                      
+Junior Canada  Laptop          5.0      2.0
+               Smartphone      5.0      2.0
+               Tablet          5.0      2.0
+       Iran    Laptop         10.0      0.0
+               Smartphone     10.0      0.0
+               Tablet         10.0      0.0
+       UK      Laptop          5.0      0.0
+               Smartphone      5.0      0.0
+               Tablet          5.0      0.0
+       US      Laptop          5.0      0.0
+               Smartphone      5.0      0.0
+               Tablet          5.0      0.0
+Senior Canada  Laptop          2.0      2.0
+               Smartphone      2.0      2.0
+               Tablet          2.0      2.0
+       Iran    Laptop          7.0      0.0
+               Smartphone      7.0      0.0
+               Tablet          7.0      0.0
+       UK      Laptop          2.0      0.0
+               Smartphone      2.0      0.0
+               Tablet          2.0      0.0
+       US      Laptop          2.0      0.0
+               Smartphone      2.0      0.0
+               Tablet          2.0      0.0
+
+mean_variant_metric_df:
+                              metric1   metric2
+variant                                        
+(control, control, control)  3.666667  0.444444
+(control, control, enabled)  3.962963  0.481481
+(control, control, nan)      3.285714  0.857143
+(control, enabled, control)  3.811321  0.490566
+(control, enabled, enabled)  3.967213  0.672131
+(control, enabled, nan)      3.800000  0.350000
+(control, nan, control)      3.750000  0.833333
+(control, nan, enabled)      3.208333  0.833333
+(control, nan, nan)          3.800000  0.400000
+(nan, control, control)      3.800000  1.200000
+(nan, control, enabled)      3.833333  0.500000
+(nan, control, nan)          3.666667  0.666667
+(nan, enabled, control)      3.680000  0.800000
+(nan, enabled, enabled)      4.400000  0.650000
+(nan, enabled, nan)          3.500000  0.571429
+(nan, nan, control)          2.750000  0.250000
+(nan, nan, enabled)          5.272727  0.545455
+(nan, nan, nan)              5.000000  0.000000
+(v1, control, control)       4.533333  0.800000
+(v1, control, enabled)       3.541667  0.416667
+(v1, control, nan)           4.545455  0.363636
+(v1, enabled, control)       3.977273  0.681818
+(v1, enabled, enabled)       3.969697  0.888889
+(v1, enabled, nan)           4.241379  0.206897
+(v1, nan, control)           2.666667  0.222222
+(v1, nan, enabled)           4.333333  0.571429
+(v1, nan, nan)               5.000000  1.000000
+(v2, control, control)       4.947368  0.526316
+(v2, control, enabled)       3.880952  0.619048
+(v2, control, nan)           4.000000  0.222222
+(v2, enabled, control)       4.051282  0.564103
+(v2, enabled, enabled)       3.731707  0.634146
+(v2, enabled, nan)           4.722222  0.444444
+(v2, nan, control)           4.400000  0.000000
+(v2, nan, enabled)           4.151515  0.484848
+(v2, nan, nan)               3.000000  0.000000
+
+df with Impacts, sim.expt_metric_df:
+   memberid   Level Country  ...                      variant metric1 metric2
+0         1  Junior    Iran  ...       (v2, enabled, control)    13.0    -5.0
+1         2  Senior      UK  ...      (nan, enabled, control)     0.0    -5.0
+2         3  Junior  Canada  ...      (control, nan, enabled)     6.5     2.0
+3         4  Junior  Canada  ...  (control, enabled, enabled)     4.5    -3.0
+4         5  Senior      US  ...       (v1, control, enabled)     0.0     6.0
+
+[5 rows x 10 columns]
+
+sim.expt_metric_df.shape:
+(1000, 10)
+
+mmean_attribute_metric_df:
+                             metric1   metric2
+Level  Country Device                         
+Junior Canada  Laptop       7.153846  2.846154
+               Smartphone   7.803191  0.382979
+               Tablet       9.511905  0.642857
+       Iran    Laptop       9.600000  0.200000
+               Smartphone  10.625000 -1.600000
+               Tablet      13.500000 -2.947368
+       UK      Laptop       2.833333  2.166667
+               Smartphone   6.965278 -1.166667
+               Tablet       6.120000 -0.560000
+       US      Laptop       6.979167 -1.375000
+               Smartphone   7.385593 -1.008475
+               Tablet       8.152542 -1.627119
+Senior Canada  Laptop       4.333333  0.416667
+               Smartphone   6.107527  0.720430
+               Tablet       4.916667 -0.428571
+       Iran    Laptop       8.500000  0.400000
+               Smartphone   9.266667 -2.366667
+               Tablet      12.000000  0.083333
+       UK      Laptop       2.300000 -1.600000
+               Smartphone   3.358333 -1.950000
+               Tablet       3.359375 -1.312500
+       US      Laptop       4.613636 -1.636364
+               Smartphone   3.414179 -1.343284
+               Tablet       5.000000 -0.843137
+
+mean_variant_metric_df:
+                               metric1   metric2
+variant                                         
+(control, control, control)   5.166667  1.444444
+(control, control, enabled)   5.462963  1.481481
+(control, control, nan)       4.785714  1.857143
+(control, enabled, control)   3.311321 -4.509434
+(control, enabled, enabled)   3.467213 -4.327869
+(control, enabled, nan)       3.300000 -4.650000
+(control, nan, control)       5.250000  0.833333
+(control, nan, enabled)       4.708333  0.833333
+(control, nan, nan)           5.300000  0.400000
+(nan, control, control)       3.800000  2.200000
+(nan, control, enabled)       3.833333  1.500000
+(nan, control, nan)           3.666667  1.666667
+(nan, enabled, control)       1.680000 -4.200000
+(nan, enabled, enabled)       2.400000 -4.350000
+(nan, enabled, nan)           1.500000 -4.428571
+(nan, nan, control)           2.750000  0.250000
+(nan, nan, enabled)           5.272727  0.545455
+(nan, nan, nan)               5.000000  0.000000
+(v1, control, control)        2.533333  6.800000
+(v1, control, enabled)        1.541667  6.416667
+(v1, control, nan)            2.545455  6.363636
+(v1, enabled, control)       -0.022727  0.681818
+(v1, enabled, enabled)       24.969697  0.888889
+(v1, enabled, nan)            0.241379  0.206897
+(v1, nan, control)            0.666667  5.222222
+(v1, nan, enabled)            2.333333  5.571429
+(v1, nan, nan)                3.000000  6.000000
+(v2, control, control)        7.947368  1.526316
+(v2, control, enabled)        8.880952  1.619048
+(v2, control, nan)            9.000000  1.222222
+(v2, enabled, control)        7.051282 -4.435897
+(v2, enabled, enabled)        6.731707 -4.365854
+(v2, enabled, nan)            7.722222 -4.555556
+(v2, nan, control)            9.400000  0.000000
+(v2, nan, enabled)            9.151515  0.484848
+(v2, nan, nan)                8.000000  0.000000
+
+mean_attribute_variant_metric_df:
+                                                   metric1  metric2
+Level  Country Device variant                                      
+Junior Canada  Laptop (control, control, enabled)      6.5      3.0
+                      (control, enabled, enabled)      4.5     -3.0
+                      (control, nan, enabled)          6.5      2.0
+                      (nan, enabled, enabled)          3.0     -3.0
+                      (v1, control, control)           3.0      8.0
+...                                                    ...      ...
+Senior US      Tablet (v2, control, enabled)           7.0      1.0
+                      (v2, control, nan)               7.0      1.0
+                      (v2, enabled, control)           5.0     -5.0
+                      (v2, enabled, enabled)           5.0     -5.0
+                      (v2, nan, enabled)               7.0      0.0
+
+[394 rows x 2 columns]

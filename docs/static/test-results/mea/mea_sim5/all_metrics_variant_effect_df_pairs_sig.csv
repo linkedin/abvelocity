@@ -1,0 +1,2 @@
+metric,launch,delta,delta_percent,ci,ci_percent,delta_std,delta_sum,delta_sum_ci,z_value,p_value,sample_counts,impacted_counts
+metric1,"(v1, enabled) launch",11.54,298.95,"(11.19, 11.9)","(289.84, 308.06)",0.18,11313.27,"(10968.45, 11658.09)",64.30,0.00,"(289, 308)","(980, 980)"
