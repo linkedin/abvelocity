@@ -1,0 +1,55 @@
+[tool.poetry]
+name = "abvelocity"
+version = "0.1.0"
+description = "A Python package for accelerating data-driven experiments and analysis"
+authors = ["Reza Hosseini <reza1317@gmail.com>"]
+license = "BSD-2-Clause"
+readme = "README.md"
+
+keywords = ["experiments", "velocity", "data-analysis", "visualization", "statistics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+packages = [{ include = "abvelocity", from = "abvelocity/src" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+Jinja2 = "^3.1.0"
+numpy = "^2.0.0"
+pandas = "^2.2.0"
+scipy = "^1.13.0"
+statsmodels = "^0.14.0"
+plotly = "^5.24.0"
+pyhocon = "^0.3.0"
+tabulate = "^0.9.0"
+presto-python-client = "^0.8.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+pytest-cov = "^5.0.0"
+ruff = "^0.6.9"
+mkdocs = "^1.6.0"
+mkdocs-material = "^9.6.11"
+pre-commit = "^3.8.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+select = ["E", "F", "W", "I", "UP", "B", "Q"]
+ignore = []
+
+[tool.pytest.ini_options]
+addopts = "--cov=abvelocity --cov-report=html"
+testpaths = ["test"]
+pythonpath = ["src"]
