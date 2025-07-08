@@ -239,8 +239,8 @@ def calc_variant_list_metric_stats(
             for sum_sq, sample_count, mean in zip(sum_sqs, sample_counts, means)
         ]
         assert all(
-            [var >= 0 for var in vars]
-        ), f"Variance is negative: {vars}. This is not possible."
+            [not var < 0 for var in vars]
+        ), f"Variance is negative for one of: {vars}. This is not possible."
         # We get the population size N by summing the trigger state counts.
         total_trigger_state_count = sum(trigger_state_counts)
         # We define the population weights as w_i = N_i/N where N_i is the trigger state count for the i-th variant.
@@ -267,7 +267,7 @@ def calc_variant_list_metric_stats(
             mean=weighted_sample_mean,
             sd=None,  # This is skipped because there is no direct estimate of `sd`, and this quantity is not needed.
             var=None,  # This is skipped because there is no direct estimate of `var`, and this quantity is not needed.
-            sample_count=sample_count,  # This is skipped because there is no direct estimate of `count`, and this quantity is not needed.
+            sample_count=sample_count,
             sum=updated_sum,  # This is included as it is useful to calculate the global (aka site-wide) impact.
             sum_sq=None,  # This is skipped because there is no direct estimate of `sum_sq`, and this quantity is not needed.
             sample_mean_var=sample_mean_var,

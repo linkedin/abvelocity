@@ -130,9 +130,7 @@ class DerivedExptStats:
         conditional_trigger_dfs_str = ""
         if self.conditional_trigger_dfs:
             for i, df in self.conditional_trigger_dfs.items():
-                conditional_trigger_dfs_str += (
-                    f"\nexpt {i}'s overlap by other: {df.to_string()}\n"
-                )
+                conditional_trigger_dfs_str += f"\nexpt {i}'s overlap by other: {df.to_string()}\n"
 
         return (
             f"Derived Experiment Statistics:\n"
@@ -248,9 +246,7 @@ class DerivedExptStats:
         conditional_trigger_dfs_md = ""
         if self.conditional_trigger_dfs:
             for i, df in self.conditional_trigger_dfs.items():
-                conditional_trigger_dfs_md += (
-                    f"\nexpt {i}'s overlap by other: {df.to_markdown()}\n"
-                )
+                conditional_trigger_dfs_md += f"\nexpt {i}'s overlap by other: {df.to_markdown()}\n"
 
         overlap_rates_md = ""
         if self.overlap_rates:

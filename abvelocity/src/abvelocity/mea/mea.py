@@ -367,6 +367,8 @@ class MEA:
         variant_count_df = analysis_info.multi_expt_info.derived_stats.variant_count_df
 
         for metric in metrics:
+            print(f"\n**** MEA for metric name: {metric.name}")
+            print(f"\n**** MEA for metric def: {metric}")
             metric_result_dict[metric.name] = MEAMetricResult()
             # TODO: extend to more general metrics (allow denominators)
             # Currently it works only for metrics with a numerator.

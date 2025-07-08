@@ -20,9 +20,12 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # Original author: Reza Hosseini
 
+import pytest
 
 from abvelocity.journey.event.gen_event_query import (
+    DATE_COL_DEFAULT,
     EventTable,
+    MultiEventTable,
     convert_to_snake_case,
     gen_event_query,
 )
@@ -105,3 +108,105 @@ def test_gen_event_query():
     """
 
     assert_query_is_equal(obtained_query, expected_query)
+
+
+def test_multi_event_table_unique_labels_success():
+    """Tests that MultiEventTable allows unique event_labels."""
+    event1 = EventTable(event_label="login", table_name="users.logins")
+    event2 = EventTable(event_label="signup", table_name="users.signups")
+    event3 = EventTable(event_label="purchase", table_name="users.purchases")
+
+    # Should not raise an error
+    multi_event = MultiEventTable(event_tables=[event1, event2, event3])
+    assert len(multi_event.event_tables) == 3
+
+
+def test_multi_event_table_unique_labels_failure():
+    """Tests that MultiEventTable raises ValueError for duplicate event_labels."""
+    event1 = EventTable(event_label="view", table_name="data.page_views")
+    event2 = EventTable(event_label="click", table_name="data.clicks")
+    event3 = EventTable(event_label="view", table_name="data.old_views")  # Duplicate label
+
+    with pytest.raises(ValueError) as excinfo:
+        MultiEventTable(event_tables=[event1, event2, event3])
+
+    assert "All event_labels within 'event_tables' must be unique." in str(excinfo.value)
+    assert "'view'" in str(excinfo.value)  # Check if the duplicate label is mentioned
+
+
+def test_multi_event_table_propagate_common_info():
+    """Tests the propagation of common_info fields to event_tables."""
+    common_info = EventTable(
+        select_cols=["id", "timestamp"],
+        conditions=["is_active = TRUE"],
+        date_col="event_date",
+        table_name="default_table",
+        table_query="SELECT * FROM default_source WHERE type = 'data'",
+        start_date="2024-01-01",
+        end_date="2024-01-31",
+    )
+
+    event1 = EventTable(event_label="eventA")
+    event2 = EventTable(
+        event_label="eventB", table_name="specific_table", conditions=["specific = 'yes'"]
+    )
+    event3 = EventTable(
+        event_label="eventC", select_cols=["custom_col"], date_col="custom_date_col"
+    )
+
+    multi_event = MultiEventTable(event_tables=[event1, event2, event3], common_info=common_info)
+
+    # Before propagation, check initial state. `date_col` now defaults to None.
+    assert event1.select_cols is None
+    assert event1.conditions is None
+    assert event1.date_col is None  # Changed from `== DATE_COL_DEFAULT`
+    assert event1.table_name is None
+    assert event1.table_query is None
+    assert event1.start_date is None
+
+    # Perform propagation
+    multi_event.propogate_common_info()
+
+    # Assert propagation for event1 (initially None, so should get common_info)
+    assert event1.select_cols == ["id", "timestamp"]
+    assert event1.conditions == ["is_active = TRUE"]
+    # Changed from `== DATE_COL_DEFAULT` to reflect the propagation from common_info.
+    assert event1.date_col == "event_date"
+    assert event1.table_name == "default_table"
+    assert event1.table_query == "SELECT * FROM default_source WHERE type = 'data'"
+    assert event1.start_date == "2024-01-01"
+    assert event1.end_date == "2024-01-31"
+
+    # Assert propagation for event2 (had existing conditions, so common should be ADDED)
+    assert event2.select_cols == ["id", "timestamp"]
+    assert event2.conditions == ["is_active = TRUE", "specific = 'yes'"]
+    assert event2.date_col == "event_date"
+    assert event2.table_name == "specific_table"  # Should retain its specific value
+    assert event2.table_query == "SELECT * FROM default_source WHERE type = 'data'"
+    assert event2.start_date == "2024-01-01"
+    assert event2.end_date == "2024-01-31"
+
+    # Assert propagation for event3 (initially None for conditions, so should get common_info)
+    assert event3.select_cols == ["custom_col"]  # Should retain its specific value
+    assert event3.conditions == ["is_active = TRUE"]
+    assert event3.date_col == "custom_date_col"  # Should retain its specific value
+    assert event3.table_name == "default_table"
+    assert event3.table_query == "SELECT * FROM default_source WHERE type = 'data'"
+    assert event3.start_date == "2024-01-01"
+    assert event3.end_date == "2024-01-31"
+
+    # Test case: common_info is None. This tests the fallback to DATE_COL_DEFAULT.
+    # Resetting event1 for this sub-test, as it was modified above.
+    event1_reset = EventTable(event_label="eventA_reset")
+    multi_event_no_common = MultiEventTable(event_tables=[event1_reset])
+
+    # Assert initial state is None
+    assert event1_reset.date_col is None
+
+    multi_event_no_common.propogate_common_info()
+
+    # The propagation method will now assign the default date_col if common_info is None
+    assert event1_reset.select_cols is None
+    assert event1_reset.conditions is None
+    # Now, `date_col` is assigned the default value when common_info is None
+    assert event1_reset.date_col == DATE_COL_DEFAULT

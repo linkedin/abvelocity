@@ -130,6 +130,7 @@ def create_sankey(
     link_hovertemplate: Optional[str] = None,
     add_end_state: bool = False,
     distinct_nodes_by_stage: bool = False,
+    additional_dimensions: Optional[List[str]] = None,
 ) -> go.Figure:
     """
     Creates a Sankey plot from sequential path data in a DataFrame.
@@ -168,6 +169,7 @@ def create_sankey(
                                         2. B -> A -> C -> D
                                         If true, these nodes would be named as A_s1, A_s2, B_s1, B_s2, C_s3, D_s4 )
                                         If false, all nodes will be represented with node names as it is ( A, B, C, D).
+        additional_dimensions (Optional[List[str]]): Additional columns to group by in the Sankey plot.
 
     Returns:
         go.Figure: The generated Plotly Figure object.
@@ -195,6 +197,8 @@ def create_sankey(
 
     # Validate columns
     required_df_cols = set(current_path_cols + [value_col])
+    if additional_dimensions:
+        required_df_cols.update(additional_dimensions)
     if not required_df_cols.issubset(df.columns):
         missing = required_df_cols - set(df.columns)
         raise ValueError(f"Missing required columns in DataFrame: {missing}")
@@ -225,6 +229,26 @@ def create_sankey(
 
         generated_flow_values.extend(current_stage_links[value_col].astype(float).tolist())
 
+    # For rows with only one step and no end-state or extra dimensions, emit a self-link so the node shows up
+    if not add_end_state and not additional_dimensions:
+        single_links = []
+        for _, row in df.iterrows():
+            # Pick out the non-null steps
+            seen = [row[c] for c in current_path_cols if pd.notna(row[c])]
+            # If only one step in the journey, append a tuple where source=target to create a loop
+            if len(seen) == 1:
+                src = str(seen[0])
+                single_links.append((src, src, float(row[value_col])))
+
+        # Aggregate single-step rows and append to the label list
+        if single_links:
+            single_df = pd.DataFrame(single_links, columns=["source", "target", value_col])
+            agg = single_df.groupby(["source", "target"], as_index=False)[value_col].sum()
+            for _, r in agg.iterrows():
+                generated_source_labels.append(r["source"])
+                generated_target_labels.append(r["target"])
+                generated_flow_values.append(r[value_col])
+
     if add_end_state:
         leaf_sources = []
         leaf_values = []
@@ -253,6 +277,34 @@ def create_sankey(
                 generated_target_labels.append("End")
                 generated_flow_values.append(r[value_col])
 
+    if additional_dimensions:
+        extra_links = []
+        for _, row in df.iterrows():
+            # Find the last non-null event in this row
+            if add_end_state:
+                last_label = "End"
+            else:
+                seen = [row[c] for c in current_path_cols if pd.notna(row[c])]
+                if not seen:
+                    continue
+                last_label = str(seen[-1])
+                if distinct_nodes_by_stage:
+                    last_label = f"{last_label}_s{len(seen)}"
+            # For each requested dimension, link last_event -> dim_value
+            for dim in additional_dimensions:
+                val = row.get(dim)
+                if pd.isna(val) or val is None:
+                    continue
+                extra_links.append((last_label, str(val), row[value_col]))
+
+        updated_df = pd.DataFrame(extra_links, columns=["source", "target", value_col])
+        agg = updated_df.groupby(["source", "target"], as_index=False)[value_col].sum()
+        for _, row in agg.iterrows():
+            generated_source_labels.append(row["source"])
+            generated_target_labels.append(row["target"])
+            generated_flow_values.append(row[value_col])
+
+    # If no flows were generated, return an empty figure with a message
     if not generated_source_labels:
         empty_fig = go.Figure()
         empty_fig.update_layout(title_text=f"{title} (No data to display)")

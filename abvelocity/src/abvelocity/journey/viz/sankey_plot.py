@@ -69,6 +69,8 @@ class SankeyPlot:
         color_dict: Optional[Dict[str, str]] = None,
         add_end_state: bool = False,
         distinct_nodes_by_stage: bool = False,
+        additional_dimensions: Optional[List[str]] = None,
+        top_n_dims: Optional[int] = 5,
     ) -> SankeyResult:
         """
         Generate a sankey visualization for a given sequence table.
@@ -88,21 +90,31 @@ class SankeyPlot:
                                         2. B -> A -> C -> D
                                         If true, these nodes would be named as A_s1, A_s2, B_s1, B_s2, C_s3, D_s4 )
                                         If false, all nodes will be represented with node names as it is ( A, B, C, D).
+            additional_dimensions (Optional[List[str]]): Additional columns to group by in the sankey plot. These columns will be appended as extra levels
+                                                        in the sankey hierarchy. Defaults to None.
+            top_n_dims (Optional[int]): For each additional dimension, only the top N most frequent values will be shown.
+                                        All others will be grouped as 'Others'. This helps keep the plot readable. Defaults to 5.
 
         Returns:
             SunburstResult: Dataclass containing the generated chart data.
         """
-
         query = CountSeqQuery(
             table_name=table_name,
             max_seq_index=max_seq_index,
             count_distinct_col=count_distinct_col,
-            extra_groupby_cols=None,
+            extra_groupby_cols=additional_dimensions,
             conditions=conditions,
         ).gen()
 
         query += " ORDER BY percent DESC"
         df = self.cursor.get_df(query=query).df
+
+        # Considers the top N dimensions if specified and classifies the rest as 'Others' for the sake for readability.
+        if top_n_dims and additional_dimensions:
+            for dim in additional_dimensions:
+                if dim in df.columns:
+                    top_vals = df.groupby(dim)[value_col].sum().nlargest(top_n_dims).index
+                    df[dim] = df[dim].where(df[dim].isin(top_vals), "Others")
 
         if df.empty:
             raise ValueError("df is empty, cannot plot.")
@@ -119,6 +131,7 @@ class SankeyPlot:
             title=title,
             add_end_state=add_end_state,
             distinct_nodes_by_stage=distinct_nodes_by_stage,
+            additional_dimensions=additional_dimensions,
         )
 
         file_name = os.path.join(
