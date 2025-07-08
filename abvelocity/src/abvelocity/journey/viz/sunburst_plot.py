@@ -65,6 +65,8 @@ class SunburstPlot:
         max_seq_index: int = 5,
         count_distinct_col: Optional[str] = None,
         color_dict: Optional[Dict[str, str]] = None,
+        additional_dimensions: Optional[List[str]] = None,
+        top_n_dims: Optional[int] = 5,
     ) -> SunburstResult:
         """
         Generate a sunburst visualization for a given sequence table.
@@ -78,6 +80,10 @@ class SunburstPlot:
             max_seq_index (int): Number of elements in the sequence / journey.
             count_distinct_col (Optional[str]): Column to count distinct values from.
             color_dict (Optional[Dict[str, str]]): A dictionary mapping labels to colors. If None, default colors are generated.
+            additional_dimensions (Optional[List[str]]): Additional columns to group by in the sunburst plot. These columns will be
+                                                     appended as extra levels in the sunburst hierarchy. Defaults to None.
+            top_n_dims (Optional[int]): For each extra groupby column, only the top N most frequent values will be shown;
+                                        all others will be grouped as 'Others'. This helps keep the plot readable. Defaults to 5.
 
         Returns:
             SunburstResult: Dataclass containing the generated chart data.
@@ -87,7 +93,7 @@ class SunburstPlot:
             table_name=table_name,
             max_seq_index=max_seq_index,
             count_distinct_col=count_distinct_col,
-            extra_groupby_cols=None,
+            extra_groupby_cols=additional_dimensions,
             conditions=conditions,
         ).gen()
 
@@ -96,6 +102,22 @@ class SunburstPlot:
 
         if df.empty:
             raise ValueError("df is empty, cannot plot.")
+
+        # Consider the top N dimensions if specified and classifies the rest as 'Others' for the sake for readability.
+        if top_n_dims and additional_dimensions:
+            for dim in additional_dimensions:
+                if dim in df.columns:
+                    top_vals = df.groupby(dim)[value_col].sum().nlargest(top_n_dims).index
+                    df[dim] = df[dim].where(df[dim].isin(top_vals), "Others")
+
+        if additional_dimensions:
+            for i, dim in enumerate(additional_dimensions, start=max_seq_index + 1):
+                if dim not in df.columns:
+                    continue
+                # Prefix to keep labels unique and clear
+                df[f"s{i}"] = df[dim].astype(str)
+            # Bump the depth so create_sunburst sees them
+            max_seq_index += len(additional_dimensions)
 
         df = df.fillna("end")
         print(f"\n\n\n*** df:\n\n\n {df.head()}")

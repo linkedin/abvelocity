@@ -13,17 +13,22 @@
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 # DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 # #ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR OR SERVICES;
 # LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # Original author: Reza Hosseini
 
+import math
+
 import numpy as np
 from scipy import stats
 
 from abvelocity.stats.stats import DeltaStats, TwoSampleTest
+
+SMALL_SAMPLE_SIZE = 5
+"""A constant to handle corner cases where the sample is too small."""
 
 
 def calc_standard_normal_ci(mean: float, sd: float, ci_coverage: float) -> dict:
@@ -52,10 +57,21 @@ def calc_standard_normal_ci(mean: float, sd: float, ci_coverage: float) -> dict:
     if sd < 0:
         raise ValueError(f"sd has to be non-negative: {sd}")
 
+    # If sd is None, we return
+    if not sd or math.isnan(sd):
+        return {"z_value": np.nan, "p_value": np.nan, "ci": np.array([np.nan, np.nan])}
+
     if not (0 < ci_coverage < 1):
         raise ValueError(f"ci_coverage has to be between 0 and 1: {ci_coverage}")
 
-    z_value = mean / sd
+    # If both sd and mean are zero, we do not divide 0/0 and assign a signifcant z_value of magnitude 5
+    # If only sd is zero z_value will be 5 times the sign of the mean
+    if sd == 0 and mean == 0:
+        z_value = 5.0
+    elif sd == 0:
+        z_value = np.sign(mean) * 5.0
+    else:
+        z_value = mean / sd
 
     p_value = 2 * (1 - stats.norm.cdf(abs(z_value), loc=0, scale=1))
     # Calculates Z (standard normal) quantile for a given confidence interval coverage level
@@ -126,17 +142,56 @@ def two_sample_z_test(two_sample_test: TwoSampleTest) -> DeltaStats:
 
     delta = treatment_stats.mean - control_stats.mean
 
-    delta_var = treatment_stats.sample_mean_var + control_stats.sample_mean_var
+    t_var = treatment_stats.sample_mean_var
+    c_var = control_stats.sample_mean_var
+
+    delta_var = 0.0
+
+    # These following operations are to handle rare corner cases
+    # Check for NaN cases first, as NaN propagates and needs explicit handling
+    if math.isnan(t_var) and math.isnan(c_var):
+        delta_var = float("nan")
+    # If one of them is Nan we use a conservative variance
+    # by multiplying the existing one by 3
+    # If both are not Nan, we add them (this is the default situation)
+    elif math.isnan(t_var):
+        delta_var = c_var * 3
+    elif math.isnan(c_var):
+        delta_var = t_var * 3
+    else:
+        delta_var = t_var + c_var
+
     delta_std = np.sqrt(delta_var)
-    sig_res = calc_standard_normal_ci(mean=delta, sd=delta_std, ci_coverage=ci_coverage)
-    z_value = sig_res["z_value"]
-    p_value = sig_res["p_value"]
-    ci = sig_res["ci"]
+
+    z_value = np.nan
+    p_value = np.nan
+    ci = np.array([np.nan, np.nan])  # Initialize CI to NaN as well for consistency
+
+    if (
+        control_stats.sample_count is not None and control_stats.sample_count <= SMALL_SAMPLE_SIZE
+    ) or (
+        treatment_stats.sample_count is not None
+        and treatment_stats.sample_count <= SMALL_SAMPLE_SIZE
+    ):
+        # If either sample count is less than 4, return NaNs for z_value and p_value.
+        # ci will remain NaN from initialization.
+        pass  # z_value, p_value, and ci are already initialized to NaN
+    else:
+        # Only calculate if sample counts are sufficient
+        sig_res = calc_standard_normal_ci(mean=delta, sd=delta_std, ci_coverage=ci_coverage)
+        z_value = sig_res["z_value"]
+        p_value = sig_res["p_value"]
+        ci = sig_res["ci"]
 
     # TODO: Reza, the CI below can be improved by accounting for the randomness in the mean in denominator.
     # This is not a major, issue though as sample sizes are typically large for the control arm.
-    delta_percent = round(100 * delta / control_stats.mean, 3)
-    ci_percent = (100 * ci / control_stats.mean).round(3)
+    # We need to handle potential division by zero if control_stats.mean is 0
+    if control_stats.mean != 0:
+        delta_percent = round(100 * delta / control_stats.mean, 3)
+        ci_percent = (100 * ci / control_stats.mean).round(3)
+    else:
+        delta_percent = np.nan
+        ci_percent = np.array([np.nan, np.nan])
 
     # Calculate the difference between sum of metric in treatment and control arms.
     # This includes calculating conf. interval for the difference in the sums.
@@ -181,8 +236,20 @@ def two_sample_z_test(two_sample_test: TwoSampleTest) -> DeltaStats:
             ) * control_stats.sample_mean_var
 
         delta_sum_std = np.sqrt(delta_sum_var)
-        sig_res = calc_standard_normal_ci(mean=delta_sum, sd=delta_sum_std, ci_coverage=ci_coverage)
-        delta_sum_ci = sig_res["ci"]
+        # Apply the same sample count check for delta_sum_ci as well
+        if (
+            control_stats.sample_count is not None
+            and control_stats.sample_count <= SMALL_SAMPLE_SIZE
+        ) or (
+            treatment_stats.sample_count is not None
+            and treatment_stats.sample_count <= SMALL_SAMPLE_SIZE
+        ):
+            delta_sum_ci = np.array([np.nan, np.nan])
+        else:
+            sig_res_sum = calc_standard_normal_ci(
+                mean=delta_sum, sd=delta_sum_std, ci_coverage=ci_coverage
+            )
+            delta_sum_ci = sig_res_sum["ci"]
 
     return DeltaStats(
         delta=delta,

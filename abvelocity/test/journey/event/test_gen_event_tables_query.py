@@ -20,8 +20,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # Original author: Reza Hosseini
 
-
-from abvelocity.journey.event.gen_event_query import EventTable
+from abvelocity.journey.event.gen_event_query import EventTable, MultiEventTable
 from abvelocity.journey.event.gen_event_tables_query import (
     gen_event_tables_query,
     union_tables_query,
@@ -30,63 +29,85 @@ from abvelocity.testing.assert_query_is_equal import assert_query_is_equal
 
 
 def test_gen_event_tables_query():
-    """Tests `gen_event_tables_query`"""
-    start_date = "2024-10-06-00"
-    end_date = "2024-10-13-00"
+    """
+    Tests `gen_event_tables_query` using MultiEventTable,
+    ensuring common_info propagation correctly affects generated queries.
+    """
+    # These dates are passed to gen_event_tables_query, but will be overridden
+    # by common_event_info's dates if EventTable.start_date/end_date are None.
+    start_date_param = "2024-10-06-00"
+    end_date_param = "2024-10-13-00"
     create_table_prefix = "u_owner.temp_reza"
 
-    event_tables = [
-        EventTable(
-            table_name="TRACKING.randomProductUpsellImpressionEvent",
-            event_label="impression",
-            date_col="datepartition",
-            select_cols=["datepartition"],
-            conditions=[
-                "RandomProductfunnelcommonheader.referenceid IS NOT NULL",
-                "MOD(header.memberid, 10000) IN (13)",
-            ],
-            output_table_name="u_owner.temp_reza_tracking_RandomProduct_upsell_impression_event",
-        ),
-        EventTable(
-            table_name="TRACKING.randomProductUpsellClickEvent",
-            event_label="click",
-            date_col="datepartition",
-            select_cols=["datepartition"],
-            conditions=["header.memberid IS NOT NULL"],
-            output_table_name="u_owner.temp_reza_tracking_RandomProduct_upsell_click_event",
-        ),
-    ]
+    # Common info that should propagate to fields that are None in individual EventTables
+    # These dates will be used because event1 and event2 don't specify them.
+    common_start_date = "2024-01-01"
+    common_end_date = "2024-01-31"
+
+    common_event_info = EventTable(
+        select_cols=["common_id", "common_timestamp"],
+        conditions=["common_condition = TRUE"],
+        date_col="common_date_col",  # This will now propagate as EventTable's default is None
+        table_name="common_base_table",
+        table_query="SELECT c.col1, c.col2 FROM common_view c",
+        start_date=common_start_date,
+        end_date=common_end_date,
+    )
+
+    event1 = EventTable(
+        table_name="SPECIFIC_IMPRESSION_TABLE",
+        event_label="impression",
+        conditions=[
+            "specific_impression_condition IS NOT NULL",
+            "MOD(impression_id, 100) IN (1)",
+        ],
+    )
+    event2 = EventTable(
+        table_name="SPECIFIC_CLICK_TABLE",
+        event_label="click",
+        select_cols=["click_id", "click_time"],
+        conditions=None,
+        table_query="SELECT x, y FROM another_view",
+    )
+
+    multi_event_table = MultiEventTable(
+        event_tables=[event1, event2], common_info=common_event_info
+    )
 
     obtained_queries = gen_event_tables_query(
-        event_tables=event_tables,
-        start_date=start_date,
-        end_date=end_date,
+        multi_event_table=multi_event_table,
+        start_date=start_date_param,
+        end_date=end_date_param,
         create_table_prefix=create_table_prefix,
     )
 
     expected_queries = [
-        """
-        DROP TABLE IF EXISTS u_owner.temp_reza_tracking_RandomProduct_upsell_impression_event_impression;
-        CREATE TABLE IF NOT EXISTS u_owner.temp_reza_tracking_RandomProduct_upsell_impression_event_impression AS
+        # Expected query for event1 (mix of specific and common propagated values)
+        # date_col is now common_date_col
+        f"""
+        DROP TABLE IF EXISTS u_owner.temp_reza_specific_impression_table_impression;
+        CREATE TABLE IF NOT EXISTS u_owner.temp_reza_specific_impression_table_impression AS
         SELECT
-            datepartition,
+            common_id, common_timestamp,
             'impression' AS event
-        FROM TRACKING.randomProductUpsellImpressionEvent
+        FROM (SELECT c.col1, c.col2 FROM common_view c)
         WHERE TRUE
-            AND datepartition BETWEEN '2024-10-06-00' AND '2024-10-13-00'
-            AND RandomProductfunnelcommonheader.referenceid IS NOT NULL
-            AND MOD(header.memberid, 10000) IN (13)
+            AND common_date_col BETWEEN '{common_start_date}' AND '{common_end_date}'
+            AND common_condition = TRUE AND specific_impression_condition IS NOT NULL
+            AND MOD(impression_id, 100) IN (1)
         """,
-        """
-        DROP TABLE IF EXISTS u_owner.temp_reza_tracking_RandomProduct_upsell_click_event_click;
-        CREATE TABLE IF NOT EXISTS u_owner.temp_reza_tracking_RandomProduct_upsell_click_event_click AS
+        # Expected query for event2 (mix of specific and common propagated values)
+        # date_col is now common_date_col
+        f"""
+        DROP TABLE IF EXISTS u_owner.temp_reza_specific_click_table_click;
+        CREATE TABLE IF NOT EXISTS u_owner.temp_reza_specific_click_table_click AS
         SELECT
-            datepartition,
+            click_id, click_time,
             'click' AS event
-        FROM TRACKING.randomProductUpsellClickEvent
+        FROM (SELECT x, y FROM another_view)
         WHERE TRUE
-            AND datepartition BETWEEN '2024-10-06-00' AND '2024-10-13-00'
-            AND header.memberid IS NOT NULL
+            AND common_date_col BETWEEN '{common_start_date}' AND '{common_end_date}'
+            AND common_condition = TRUE
         """,
     ]
 
@@ -95,7 +116,16 @@ def test_gen_event_tables_query():
 
 
 def test_union_tables_query():
-    # Test data setup with select_cols ["user_id", "timestamp"] but query should use SELECT *
+    """
+    Tests `union_tables_query` using MultiEventTable.
+    Manually sets `output_table_name` for EventTable instances to simulate
+    prior execution of `gen_event_tables_query`.
+    """
+    create_table_prefix = "user_activity"
+    order_by = "timestamp DESC"
+
+    # For union_tables_query, the EventTable instances *must* already have output_table_name set.
+    # We simulate this here by setting them manually.
     event_tables = [
         EventTable(
             table_name="signup_events",
@@ -116,10 +146,12 @@ def test_union_tables_query():
             output_table_name="user_activity_login_events",
         ),
     ]
-    create_table_prefix = "user_activity"
-    order_by = "timestamp DESC"
 
-    # Expected query output with SELECT * (not columns listed explicitly)
+    # Create MultiEventTable (common_info is not strictly necessary for this test,
+    # as its propagation effect would have already influenced output_table_name
+    # if this were part of a larger workflow).
+    multi_event_table = MultiEventTable(event_tables=event_tables)
+
     expected_query = """
         DROP TABLE IF EXISTS user_activity_union;
         CREATE TABLE IF NOT EXISTS user_activity_union AS
@@ -134,8 +166,6 @@ def test_union_tables_query():
         ORDER BY timestamp DESC
     """
 
-    # Call the function with test data
-    obtained_query = union_tables_query(event_tables, create_table_prefix, order_by)
+    obtained_query = union_tables_query(multi_event_table, create_table_prefix, order_by)
 
-    # Use the custom assertion to compare the queries
     assert_query_is_equal(obtained_query, expected_query)
