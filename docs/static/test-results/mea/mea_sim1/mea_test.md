@@ -163,7 +163,7 @@
       <td>92.0</td>
     </tr>
   </tbody>
-</table><p><strong>Total Count:</strong> 1000</p><p><strong>Total Triggered Count:</strong> 1000</p><p><strong>Total Triggered Percent:</strong> 100.0</p><p><strong>Conditional Trigger Dfs:</strong></p><p><p>expt 1's interference by other:</p> <p><table border="1" class="dataframe">
+</table><p><strong>Total Count:</strong> 1000</p><p><strong>Total Triggered Count:</strong> 1000</p><p><strong>Total Triggered Percent:</strong> 100.0</p><p><strong>Conditional Trigger Dfs:</strong></p><p><p>expt 1's overlap by other:</p> <p><table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
       <th></th>
@@ -188,7 +188,7 @@
       <td>95.238095</td>
     </tr>
   </tbody>
-</table></p><p>expt 2's interference by other:</p> <p><table border="1" class="dataframe">
+</table></p><p>expt 2's overlap by other:</p> <p><table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
       <th></th>
@@ -213,12 +213,12 @@
       <td>96.436059</td>
     </tr>
   </tbody>
-</table></p></p><p><strong>Interference Rates:</strong><p><p><table>
+</table></p></p><p><strong>Overlap Rates:</strong><p><p><table>
   <thead>
-    <tr><th>Expt</th><th>Interference Rate (%)</th></tr>
+    <tr><th>Expt</th><th>Overlap Rate (%)</th></tr>
   </thead>
   <tbody>
-    <tr><td>Expt 1's interference: </td><td>95.24%</td></tr>
-    <tr><td>Expt 2's interference: </td><td>96.44%</td></tr>
+    <tr><td>Expt 1's overlap: </td><td>95.24%</td></tr>
+    <tr><td>Expt 2's overlap: </td><td>96.44%</td></tr>
   </tbody>
 </table></p></div></div><p><strong>Metric Family:</strong> </p><p><strong>Analysis Start Date:</strong> None</p><p><strong>Analysis End Date:</strong> None</p></div>

@@ -57,7 +57,8 @@ For example, suppose `(Experiment 1: v1, Experiment 2: enabled)` is launched, re
 
 - The experiments are run orthogonally (not hash-aligned). This means the assignments across experiments are independent.
 - There are enough samples in the combinations of interest. See the next two sections for more details.
-- For applications in tech, there is 2 weeks plus temporal overlap in experiment periods (we want to make sure temporal trends in diffs are averaged out).
+- There is temporal overlap in experiment periods. Also it is recommended that overlap is long enough that weekly trends in the deltas
+are averaged out. This recommendation does apply to simple AB tests as well of course and it is not due to MEA.
 
 ### Practical Recommendations for Using MEA
 

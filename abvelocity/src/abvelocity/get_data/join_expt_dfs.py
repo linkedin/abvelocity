@@ -21,8 +21,6 @@
 # Original author: Reza Hosseini
 """The goal is to merge various experiment assignment DataContainers."""
 
-import pandas as pd
-
 from abvelocity.get_data.data_container import DataContainer
 from abvelocity.param.constants import (
     CATEG_NAN_VALUE,
@@ -31,6 +29,7 @@ from abvelocity.param.constants import (
     VARIANT_COL,
 )
 from abvelocity.utils.merge_dfs_number_cols import merge_dfs_number_cols
+from abvelocity.utils.merge_queries_number_cols import merge_queries_number_cols
 
 ON_COLS = [UNIT_COL]
 """This is the expected list of columns which experiment data is to be joined on."""
@@ -65,21 +64,41 @@ def join_expt_dfs(
         A DataContainer containing the joined DataFrame.
     """
 
-    df_list = [dc.df for dc in dc_list if dc.df is not None]
+    # There will be three cases
+    # Case 1: There are dfs materialized in all of the dcs
+    # Case 2: dc_list contains SQL tables names
+    # Case 3: dc_list contains SQL tables
+    # To determine these we only assess the first element in dc_list
+    # If it matches the case, we assume other elements do match as well
 
-    if not df_list:
-        return DataContainer(
-            df=pd.DataFrame(), is_df=True
-        )  # Return empty DataFrame if input is empty
+    if dc_list[0].df is not None:  # Case 1
+        df_list = [dc.df for dc in dc_list if dc.df is not None]
 
-    joined_df = merge_dfs_number_cols(
-        df_list=df_list,
+        joined_df = merge_dfs_number_cols(
+            df_list=df_list,
+            on_cols=on_cols,
+            common_cols=common_cols,
+            how=how,
+            add_tuple=add_tuple,
+            nan_replacement=CATEG_NAN_VALUE,
+            drop_numbered_cols=drop_numbered_cols,
+        )
+
+        return DataContainer(df=joined_df, is_df=True)
+    elif dc_list[0].table_name is not None:  # Case 2
+        query_list = [dc.table_name for dc in dc_list if dc.table_name is not None]
+    else:  # Case 3
+        query_list = [dc.query for dc in dc_list if dc.query is not None]
+
+    # We have not returned for Case 2 and Case 3 and require more steps
+    join_query = merge_queries_number_cols(
+        queries=query_list,
         on_cols=on_cols,
         common_cols=common_cols,
         how=how,
         add_tuple=add_tuple,
-        nan_replacement=CATEG_NAN_VALUE,
+        nan_replacements=[CATEG_NAN_VALUE, CATEG_NAN_VALUE],
         drop_numbered_cols=drop_numbered_cols,
     )
 
-    return DataContainer(df=joined_df, is_df=True)
+    return DataContainer(query=join_query, is_df=False)

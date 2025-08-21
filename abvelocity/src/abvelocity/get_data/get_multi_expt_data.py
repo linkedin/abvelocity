@@ -27,6 +27,7 @@ from abvelocity.get_data.data_container import DataContainer
 from abvelocity.get_data.get_asgmnt_data import get_asgmnt_data_multi
 from abvelocity.get_data.get_expt_stats import get_expt_stats
 from abvelocity.get_data.join_expt_dfs import join_expt_dfs
+from abvelocity.param.constants import TRIGGER_TIME_COL, VARIANT_COL
 from abvelocity.param.expt_info import MultiExptInfo
 
 
@@ -36,6 +37,7 @@ def get_multi_expt_data(
     expt_asgmnt_table: str,
     get_asgmnt_query: Callable,
     condition: Optional[str] = None,
+    materialize_each_expt_to_df: bool = False,
 ) -> DataContainer:
     """This function gets the multi-experiment data and returns a DataContainer.
 
@@ -44,6 +46,7 @@ def get_multi_expt_data(
         multi_expt_info: includes the experiments information.
         expt_asgmnt_table: Table which includes expt data.
         get_asgmnt_query: Callable which creates expt query.
+        materialize_each_expt_to_df: A bool to determine if we want to materialize each
 
     Returns:
         expt_dc: The DataContainer which contains experiment data.
@@ -57,15 +60,38 @@ def get_multi_expt_data(
     print(f"condition: {condition}")
 
     """Gets User Experiment Assignment Data (Expt Data)"""
-    expt_dc_list = get_asgmnt_data_multi(
-        expt_asgmnt_table=expt_asgmnt_table,
-        get_asgmnt_query=get_asgmnt_query,
-        multi_expt_info=multi_expt_info,
-        cursor=cursor,
-        condition=condition,
-    )
-    print(f"\n *** expt_dc_list:\n {expt_dc_list}")
-    expt_dc = join_expt_dfs(expt_dc_list)
+    if materialize_each_expt_to_df:
+        expt_dc_list = get_asgmnt_data_multi(
+            expt_asgmnt_table=expt_asgmnt_table,
+            get_asgmnt_query=get_asgmnt_query,
+            multi_expt_info=multi_expt_info,
+            cursor=cursor,
+            condition=condition,
+            materialize_to_df=True,
+        )
+        print(f"\n *** expt_dc_list:\n {expt_dc_list}")
+        expt_dc = join_expt_dfs(expt_dc_list)
+    else:
+        expt_dc_list = get_asgmnt_data_multi(
+            expt_asgmnt_table=expt_asgmnt_table,
+            get_asgmnt_query=get_asgmnt_query,
+            multi_expt_info=multi_expt_info,
+            cursor=None,  # No cursor is needed here as queries are only generated.
+            condition=condition,
+            materialize_to_df=False,
+        )
+        print(f"\n *** expt_dc_list:\n {expt_dc_list}")
+        expt_dc = join_expt_dfs(expt_dc_list)
+        # In this case the join will only create a join query
+        # This means we need to materilize to df now
+        sql_query_result = cursor.get_df(expt_dc.query)
+        print(f"\n*** sql_query_result:\n{sql_query_result}")
+        df = sql_query_result.df
+        for col in [VARIANT_COL, TRIGGER_TIME_COL]:
+            if col in df.columns:
+                df[col] = [tuple(item) for item in df[col]]
+        expt_dc.df = df
+        expt_dc.is_df = True
 
     multi_expt_info.derived_stats = get_expt_stats(df=expt_dc.df)
 

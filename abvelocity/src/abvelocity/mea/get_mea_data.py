@@ -61,6 +61,32 @@ def get_mea_data(
     """
 
     multi_expt_info = analysis_info.multi_expt_info
+    # Takes intersection from time periods of all experiments
+    # This will define the analysis period
+    if analysis_info.start_date is None:
+        analysis_info.start_date = max(
+            [expt_info.start_date for expt_info in multi_expt_info.expt_info_list]
+        )
+
+    if analysis_info.end_date is None:
+        analysis_info.end_date = min(
+            [expt_info.end_date for expt_info in multi_expt_info.expt_info_list]
+        )
+
+    print(
+        f"\n*** analysis_info start date and end dates after taking intersections: {analysis_info.start_date}, {analysis_info.end_date}"
+    )
+
+    # We then update the expt_infos as well to adhere to these dates.
+    # Note that it is possible that expt_info has a tighter range for some experiments if desired.
+    # However that would be a rare case.
+    # The `min`, `max` below will ensure that the experiment range is not wider than the analysis range.
+    # Also note that `analysis_info.start_date` and `analysis_info.end_date` are None, the ranges will be all the same.
+    # This is because in the above these two quantities are calculated from `expt_info_list` in that case.
+    for expt_info in multi_expt_info.expt_info_list:
+        expt_info.start_date = max(analysis_info.start_date, expt_info.start_date)
+        expt_info.end_date = min(analysis_info.end_date, expt_info.end_date)
+
     # If either of `expt_df` and `processed_df` are not None.
     # We assume that we only are supposed to join with more metrics.
     # Therefore we do not query the expt assignment data anymore.
@@ -73,16 +99,6 @@ def get_mea_data(
             condition=condition,
         )
         # Expt data
-
-    if analysis_info.start_date is None:
-        analysis_info.start_date = max(
-            [expt_info.start_date for expt_info in multi_expt_info.expt_info_list]
-        )
-
-    if analysis_info.end_date is None:
-        analysis_info.end_date = min(
-            [expt_info.end_date for expt_info in multi_expt_info.expt_info_list]
-        )
 
     # print(f"\n*** multi_expt_info (after getting the data):\n{multi_expt_info}")
 
