@@ -41,7 +41,7 @@ def run_mea(
     comparison_pairs: list[ComparisonPair] = None,
     scale: bool = True,
     condition: Optional[str] = None,
-) -> MEAResult:
+) -> Optional[MEAResult]:
     """This is the flow to run multi-experiment analysis (MEA).
     This takes two steps:
 
@@ -97,7 +97,6 @@ def run_mea(
     # Gets the data needed for MEA and updates `analysis_info` by attaching
     # derived expt statistics and metric, metrics are not passed directly
     # in metrics field.
-
     if scale and analysis_info.metric_info_list and len(analysis_info.metric_info_list) > 1:
         print(
             f"\n*** scale is true and there are more than 1 metric groups: {len(analysis_info.metric_info_list)}"
@@ -157,6 +156,9 @@ def run_mea(
             del mea
             mea_result.combine(mea_result_new)
     else:
+        # This will also handle the case with no metrics
+        # In such case mea_result will be None
+        # However `analysis_info` could get updated with experiment stats
         df = get_mea_data(
             cursor=cursor,
             analysis_info=analysis_info,
@@ -176,6 +178,7 @@ def run_mea(
         mea.run()
 
         mea_result = mea.result
+        del df
         del mea
 
     return mea_result

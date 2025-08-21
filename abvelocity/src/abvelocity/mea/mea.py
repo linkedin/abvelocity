@@ -22,6 +22,7 @@
 
 import datetime
 import os
+import warnings
 from dataclasses import asdict, dataclass
 from typing import Optional
 
@@ -331,6 +332,15 @@ class MEA:
                 )
                 comparison_pairs.append(comparison_pair)
 
+        if not analysis_info.metric_info_list:
+            self.result = None
+            warnings.warn(
+                f"\n***: metric_info_list is None or empty = {analysis_info.metric_info_list}"
+                "This means MEA will only generate overlap results.",
+                UserWarning,
+            )
+            return None
+
         metrics = []
         for metric_info in analysis_info.metric_info_list:
             if metric_info.metrics is None:
@@ -343,9 +353,6 @@ class MEA:
 
         print(f"\n *** MEA: metrics:\n{metrics}")
         num_expts = len(expt_info_list)
-
-        if not metrics:
-            raise ValueError(f"metrics cannot be None or empty: metrics = {metrics}")
 
         print(f"\n*** MEA: df:\n{df.head(2)}")
 
@@ -612,10 +619,6 @@ class MEA:
         if not analysis_info:
             analysis_info = self.analysis_info
 
-        if mea_result is None:
-            print("***\nHalted `MEA.publish`: You have not run MEA yet.")
-            return
-
         html_str = ""
         markdown_str = ""
 
@@ -646,6 +649,31 @@ class MEA:
                 os.makedirs(path)
             else:
                 print(f"***\n path: {path} already exists")
+
+        if mea_result is None:
+            print(
+                "***\n`MEA.publish`: You do not have any MEA results for any metrics."
+                "It might be because you have not passed any metrics."
+                "The report still might be generated and include assignment stats."
+            )
+            print(f"\n*** `mea.publish`: html_file_name: {html_file_name}")
+            print(f"\n*** `mea.publish`: markdown_file_name: {markdown_file_name}")
+            if html_file_name is not None:
+                with open(f"{write_path}/{html_file_name}", "w") as f:
+                    f.write(html_str)
+                    print(f"\n*** data was written to {write_path}/{html_file_name}.")
+
+            if markdown_file_name is not None:
+                with open(f"{write_path}/{markdown_file_name}", "w") as f:
+                    f.write(markdown_str)
+                    print(f"\n*** data was written to {write_path}/{markdown_file_name}.")
+
+            return {
+                "html_str": html_str,
+                "markdown_str": markdown_str,
+                "paths": paths,
+                "file_names": file_names,
+            }
 
         # metric_result_dict = mea_result.metric_result_dict
         variant_freq_dict = mea_result.variant_freq_dict

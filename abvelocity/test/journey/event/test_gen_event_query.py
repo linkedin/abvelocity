@@ -34,10 +34,8 @@ from abvelocity.testing.assert_query_is_equal import assert_query_is_equal
 
 def test_convert_to_snake_case():
     # Test case 1
-    result = convert_to_snake_case(
-        "u_owner.member_journey_raw_TRACKING.randomProductChooserPlanActionEvent"
-    )
-    assert result == "u_owner_member_journey_raw_tracking_RandomProduct_chooser_plan_action_event"
+    result = convert_to_snake_case("random_owner.unit_journey_raw_TRACKING.SomeTableWithData")
+    assert result == "random_owner_unit_journey_raw_tracking_some_table_with_data"
 
     # Test case 2: already in snake case
     result = convert_to_snake_case("already_snake_case_string")
@@ -60,24 +58,24 @@ def test_gen_event_query():
     """Tests `gen_event_query`"""
     start_date = "2024-10-06-00"
     end_date = "2024-10-13-00"
-    create_table_prefix = "u_owner.temp_reza"
+    create_table_prefix = "random_owner.temp_reza"
 
     event_table = EventTable(
-        table_name="TRACKING.randomProductUpsellImpressionEvent",
+        table_name="TRACKING.SomeInterestingEvent",
         event_label="impression",
         select_cols=[
             "datepartition",
-            "header.memberid",
-            "header.sessionUrn",
+            "header.unitid",
+            "header.randomVisit",
             "header.time AS time",
             "requestHeader.pageKey",
-            "header.pageInstance.pageUrn",
-            "RandomProductfunnelcommonheader.referenceid",
+            "header.pageInstance.pageId",
+            "productheader.glueid",
         ],
         date_col="datepartition",
         conditions=[
-            "RandomProductfunnelcommonheader.referenceid IS NOT NULL",
-            "MOD(header.memberid, 10000) IN (13)",
+            "productheader.glueid IS NOT NULL",
+            "MOD(header.unitid, 10000) IN (13)",
         ],
     )
 
@@ -89,22 +87,22 @@ def test_gen_event_query():
     )
 
     expected_query = """
-    DROP TABLE IF EXISTS u_owner.temp_reza_tracking_RandomProduct_upsell_impression_event_impression;
-    CREATE TABLE IF NOT EXISTS u_owner.temp_reza_tracking_RandomProduct_upsell_impression_event_impression AS
+    DROP TABLE IF EXISTS random_owner.temp_reza_tracking_some_interesting_event_impression;
+    CREATE TABLE IF NOT EXISTS random_owner.temp_reza_tracking_some_interesting_event_impression AS
     SELECT
         datepartition,
-        header.memberid,
-        header.sessionUrn,
+        header.unitid,
+        header.randomVisit,
         header.time AS time,
         requestHeader.pageKey,
-        header.pageInstance.pageUrn,
-        RandomProductfunnelcommonheader.referenceid,
+        header.pageInstance.pageId,
+        productheader.glueid,
         'impression' AS event
-    FROM TRACKING.randomProductUpsellImpressionEvent
+    FROM TRACKING.SomeInterestingEvent
     WHERE TRUE
         AND datepartition BETWEEN '2024-10-06-00' AND '2024-10-13-00'
-        AND RandomProductfunnelcommonheader.referenceid IS NOT NULL
-        AND MOD(header.memberid, 10000) IN (13)
+        AND productheader.glueid IS NOT NULL
+        AND MOD(header.unitid, 10000) IN (13)
     """
 
     assert_query_is_equal(obtained_query, expected_query)

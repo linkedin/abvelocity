@@ -20,6 +20,10 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # Original author: Reza Hosseini
 
+
+import colorsys
+import re
+
 from plotly.colors import DEFAULT_PLOTLY_COLORS, n_colors, qualitative, sequential, validate_colors
 
 
@@ -71,17 +75,17 @@ def get_distinct_colors(num_colors, opacity=0.95):
         raise ValueError("Opacity must be between 0 and 1.")
 
     if num_colors <= 10:
-        # Use Plotly's 'Plotly' discrete color sequence, which is similar to tab10
+        # Use Plotly's "Plotly" discrete color sequence, which is similar to tab10
         colors = qualitative.Plotly
     elif num_colors <= 20:
-        # Use Plotly's 'Safe' or 'T10' which are 10-color scales,
-        # we can combine or use 'Paired' for 12 colors.
-        # For exactly 20, we can interpolate two 10-color scales or use 'Dark24'
-        # 'Plotly' + 'D3' gives 20 distinct colors if we ensure no overlap.
-        # Let's use 'Light24' and truncate for simplicity if >= 20.
+        # Use Plotly's "Safe" or "T10" which are 10-color scales,
+        # we can combine or use "Paired" for 12 colors.
+        # For exactly 20, we can interpolate two 10-color scales or use "Dark24"
+        # "Plotly" + "D3" gives 20 distinct colors if we ensure no overlap.
+        # Let's use "Light24" and truncate for simplicity if >= 20.
         colors = qualitative.Light24
     elif num_colors <= 256:
-        # Use a sequential colormap like 'Viridis' for a larger number of colors
+        # Use a sequential colormap like "Viridis" for a larger number of colors
         # n_colors directly provides the interpolated colors.
         # We need to specify the start and end colors for the Viridis scale.
         # plotly.colors.sequential.Viridis is a list of colors
@@ -94,7 +98,7 @@ def get_distinct_colors(num_colors, opacity=0.95):
 
     result = []
     for color in colors[:num_colors]:  # Ensure we don't go over num_colors if a palette has more
-        # plotly colors are typically 'rgb(R, G, B)' or '#RRGGBB'
+        # plotly colors are typically "rgb(R, G, B)" or "#RRGGBB"
         # We need to parse them and convert to rgba
         if color.startswith("rgb("):
             # Extract R, G, B values
@@ -113,3 +117,75 @@ def get_distinct_colors(num_colors, opacity=0.95):
         result.append(color_str)
 
     return result
+
+
+def generate_color_shades(color, n_colors):
+    """
+    Generate n_colors shades from a single color (hex or English name) by varying saturation and value.
+
+    Args:
+        color (str): Hex color code (e.g., "#800080") or English color name (e.g., "purple")
+        n_colors (int): Number of shades to generate
+
+    Returns:
+        list: List of hex color codes
+    """
+    # Dictionary of common color names to hex codes
+    COLOR_MAP = {
+        "red": "#FF0000",
+        "green": "#008000",
+        "purple": "#800080",
+        "blue": "#0000FF",
+        "yellow": "#FFFF00",
+        "pink": "#FF69B4",
+        "black": "#000000",
+        "white": "#FFFFFF",
+        "gray": "#808080",
+        "orange": "#FFA500",
+        "brown": "#A52A2A",
+        "cyan": "#00FFFF",
+        "magenta": "#FF00FF",
+    }
+
+    # Check if color is a hex code
+    hex_pattern = re.compile(r"^#(?:[0-9a-fA-F]{3}){1,2}$")
+    if hex_pattern.match(color):
+        hex_color = color
+    else:
+        # Convert color name to hex
+        hex_color = COLOR_MAP.get(color.lower())
+        if not hex_color:
+            raise ValueError(
+                f"Invalid color: '{color}'. Use a hex code (e.g., '#800080') or one of: {', '.join(COLOR_MAP.keys())}"
+            )
+
+    # Convert hex to RGB (normalized to 0-1)
+    hex_color = hex_color.lstrip("#")
+
+    # Expand 3-digit hex codes to 6-digit hex codes
+    if len(hex_color) == 3:
+        hex_color = "".join([c * 2 for c in hex_color])
+
+    # Explicitly parse R, G, B components
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+    rgb = (r / 255.0, g / 255.0, b / 255.0)
+
+    # Convert RGB to HSV
+    h, s, v = colorsys.rgb_to_hsv(*rgb)
+
+    shades = []
+    for i in range(n_colors):
+        # Vary saturation (0.5 to 1.0) and value (0.6 to 1.0) for distinct shades
+        # Ensure division by zero is handled for n_colors = 0 or 1
+        s_var = 0.5 + (0.5 * i / max(n_colors, 1))  # Scale saturation
+        v_var = 0.6 + (0.4 * i / max(n_colors, 1))  # Scale value
+
+        rgb_var = colorsys.hsv_to_rgb(h, s_var, v_var)
+        hex_color = "#{:02x}{:02x}{:02x}".format(
+            int(rgb_var[0] * 255), int(rgb_var[1] * 255), int(rgb_var[2] * 255)
+        )
+        shades.append(hex_color)
+
+    return shades

@@ -35,9 +35,9 @@ WRITE_PATH = Path(__file__).parents[5].joinpath("docs/static/test-results/write_
 def sample_queries_dict():
     """A dictionary of queries with unsorted keys for testing."""
     return {
-        "query_z_last": "SELECT * FROM z_table;",
-        "query_a_first": "SELECT * FROM a_table;",
-        "query_b_second": "SELECT * FROM b_table;",
+        "query_z_first": "SELECT * FROM z_table;",
+        "query_a_second": "SELECT * FROM a_table;",
+        "query_b_last": "SELECT * FROM b_table;",
     }
 
 
@@ -60,12 +60,12 @@ def test_write_queries_with_prefix(sample_queries_dict, request):
     assert len(written_files) == 3
 
     # Assert filenames are correct and in sorted order of the keys
-    expected_filenames = ["01_query_a_first.sql", "02_query_b_second.sql", "03_query_z_last.sql"]
-    assert sorted([f.name for f in test_dir.iterdir()]) == expected_filenames
+    expected_filenames = ["01_query_z_first.sql", "02_query_a_second.sql", "03_query_b_last.sql"]
+    assert sorted([f.name for f in test_dir.iterdir()]) == sorted(expected_filenames)
 
     # Assert contents of the first file are correct
-    with open(test_dir / "01_query_a_first.sql", "r") as f:
-        assert f.read() == sample_queries_dict["query_a_first"]
+    with open(test_dir / "01_query_z_first.sql", "r") as f:
+        assert f.read() == sample_queries_dict["query_z_first"]
 
 
 def test_write_queries_without_prefix(sample_queries_dict, request):
@@ -81,12 +81,12 @@ def test_write_queries_without_prefix(sample_queries_dict, request):
     assert len(written_files) == 3
 
     # Assert filenames are correct and sorted by sanitized name
-    expected_filenames = ["query_a_first.sql", "query_b_second.sql", "query_z_last.sql"]
-    assert sorted([f.name for f in test_dir.iterdir()]) == expected_filenames
+    expected_filenames = ["query_z_first.sql", "query_a_second.sql", "query_b_last.sql"]
+    assert sorted([f.name for f in test_dir.iterdir()]) == sorted(expected_filenames)
 
     # Assert contents are correct
-    with open(test_dir / "query_a_first.sql", "r") as f:
-        assert f.read() == sample_queries_dict["query_a_first"]
+    with open(test_dir / "query_z_first.sql", "r") as f:
+        assert f.read() == sample_queries_dict["query_z_first"]
 
 
 def test_write_queries_sanitizes_filenames(complex_key_dict, request):
@@ -117,7 +117,7 @@ def test_write_queries_warns_on_non_empty_dir(sample_queries_dict, capfd, reques
     assert "already exists and is not empty" in captured.out
 
     # Check that both the new files and the original file exist
-    assert (test_dir / "01_query_a_first.sql").exists()
+    assert (test_dir / "01_query_z_first.sql").exists()
     assert (test_dir / "existing_file.txt").exists()
 
 

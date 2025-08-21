@@ -1,0 +1,1 @@
+SELECT date_add('day', 1, CURRENT_DATE) FROM users

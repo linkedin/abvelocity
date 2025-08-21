@@ -187,9 +187,17 @@ def calc_variant_list_metric_stats(
 
     all_variants_set = set(variant_metric_stats_df[variant_col].values)
     # Raises a `ValueError` if the variants are not in the variants found in data.
+    """
     if not set(variant_values).issubset(all_variants_set):
         raise ValueError(
             f"{variant_values} is not in the possible variants. "
+            f"Possible variants: {all_variants_set}"
+        )
+    """
+    nonexisting_variants = [v for v in variant_values if v not in all_variants_set]
+    if nonexisting_variants:
+        raise ValueError(
+            f"\n*** Non-existing variants: {nonexisting_variants}."
             f"Possible variants: {all_variants_set}"
         )
 

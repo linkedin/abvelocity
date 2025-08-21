@@ -88,17 +88,15 @@ def write_queries(
     os.makedirs(output_dir, exist_ok=True)
 
     written_files: List[str] = []
-    # Sort keys to ensure consistent file ordering, especially important if
-    # the dictionary insertion order isn't guaranteed (though it is in Python 3.7+).
-    sorted_keys = sorted(queries_dict.keys())
 
-    num_queries = len(sorted_keys)
+    keys = list(queries_dict.keys())
+    num_queries = len(keys)
     padding_width = len(str(num_queries))
     # If the number of queries is less than 10, ensure a minimum padding width of 2.
     if num_queries < 10:
         padding_width = 2
 
-    for i, key in enumerate(sorted_keys):
+    for i, key in enumerate(keys):
         sanitized_key = _sanitize_filename(key)
 
         if use_prefix:
