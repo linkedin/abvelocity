@@ -1,7 +1,0 @@
-metric,variant,sample_count,mean,sd,sum,sum_sq
-metric2,"('control',)",425,0.60,0.92,254.00,508.00
-metric2,"('enabled',)",444,0.58,0.91,256.00,512.00
-metric2,"('nan',)",31,0.77,0.99,24.00,48.00
-metric1,"('control',)",425,5.38,2.00,2288.50,14026.25
-metric1,"('enabled',)",444,1.99,2.09,883.00,3689.00
-metric1,"('nan',)",31,3.61,1.91,112.00,514.00

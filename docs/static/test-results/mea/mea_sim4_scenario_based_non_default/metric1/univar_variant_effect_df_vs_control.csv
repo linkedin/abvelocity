@@ -1,4 +1,0 @@
-impacted_counts,expt,comparison_pair,delta,delta_percent,ci,ci_percent,delta_std,delta_sum,delta_sum_ci,z_value,p_value,sample_counts
-"(None, None)",expt_0,"('v1', 'control')",6.49,167.50,"(5.6, 7.37)","(144.58, 190.42)",0.45,,,14.32,0.00,"(282, 304)"
-"(None, None)",expt_0,"('v2', 'control')",-0.75,-19.36,"(-1.11, -0.39)","(-28.61, -10.11)",0.18,,,-4.10,0.00,"(282, 285)"
-"(None, None)",expt_1,"('enabled', 'control')",5.13,151.23,"(4.42, 5.84)","(130.24, 172.22)",0.36,,,14.12,0.00,"(437, 426)"
