@@ -8,7 +8,7 @@ This assumes the data is already joined. This implies that the data fits in the 
 - Install the library using appropriate install command in the corresponding environment e.g.
 
 ```bash
-pip install abvelocity-core
+pip install abvelocity
 ```
 
 - Here we show the usage through simulated data.
@@ -69,35 +69,29 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from abvelocity.get_data.data_container import DataContainer
-from abvelocity.get_data.join_expt_dfs import join_expt_dfs
-from abvelocity.get_data.join_expt_with_metric_df import join_expt_with_metric_df
-from abvelocity.mea.mea import MEA, MEAMetricResult, MEAResult
-from abvelocity.param.analysis_info import AnalysisInfo
-from abvelocity.param.constants import TRIGGER_TIME_COL, VARIANT_COL
-from abvelocity.param.expt_info import ExptInfo, MultiExptInfo
-from abvelocity.param.launch import Launch
-from abvelocity.param.metric import Metric, UMetric
-from abvelocity.param.metric_info import MetricInfo
-from abvelocity.param.variant import ComparisonPair, Variant, VariantList
-from abvelocity.sim.sim import Sim
+from abvelocity.core.get_data.data_container import DataContainer
+from abvelocity.core.get_data.join_expt_dfs import join_expt_dfs
+from abvelocity.core.get_data.join_expt_with_metric_df import join_expt_with_metric_df
+from abvelocity.core.mea.mea import MEA, MEAMetricResult, MEAResult
+from abvelocity.core.param.analysis_info import AnalysisInfo
+from abvelocity.core.param.constants import TRIGGER_TIME_COL, VARIANT_COL
+from abvelocity.core.param.expt_info import ExptInfo, MultiExptInfo
+from abvelocity.core.param.launch import Launch
+from abvelocity.core.param.metric import Metric, UMetric
+from abvelocity.core.param.metric_info import MetricInfo
+from abvelocity.core.param.variant import ComparisonPair, Variant, VariantList
+from abvelocity.core.sim.sim import Sim
 
 import plotly.graph_objects as go
 
 
-# Replace the `write_path` with the desired path in case you want to store results in a file.
-# You could simply display the results as well.
-write_path = Path(__file__).parents[3].joinpath(f"docs/static/test-results/mea/mea-guides/")
-write_path2 = Path(f"{home}/codes/rzdv/mea")
-write_path3 = Path(__file__).parent
-write_paths = [
-    str(write_path),
-    str(write_path2),
-    str(write_path3)
-]
+# Replace `write_path` with the desired path in case you want to store results on disk.
+# You could simply display the results without writing, too.
+write_path = Path.cwd().joinpath("mea-guides")
+write_paths = [str(write_path)]
 
 for path in write_paths:
-    os.makedirs(write_path, exist_ok=True)
+    os.makedirs(path, exist_ok=True)
 
 # --- Paper figure settings ---
 PAPER_FONT_SIZE = 25
@@ -692,7 +686,7 @@ with histogram of 1000 estimated parameters.
 
 
 ```python
-from abvelocity.utils.hist_with_quantiles import hist_with_quantiles
+from abvelocity.core.utils.hist_with_quantiles import hist_with_quantiles
 
 
 # --- 1. Simulation Logic ---
