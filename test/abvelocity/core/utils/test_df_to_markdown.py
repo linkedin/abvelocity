@@ -1,0 +1,39 @@
+# BSD 2-CLAUSE LICENSE
+
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+
+# Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+# Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# Original author: Reza Hosseini
+
+import os
+from pathlib import Path
+
+import pandas as pd
+from abvelocity.core.utils.df_to_markdown import df_to_markdown
+
+WRITE_PATH = Path(__file__).parents[4].joinpath("docs/static/test-results/markdown_example/")
+os.makedirs(WRITE_PATH, exist_ok=True)
+
+
+def test_df_to_markdown():
+    # Create a simple dataframe
+    df = pd.DataFrame({"A": [1, 2897, 3], "B": [4, 5, 6], "C": [7, 8, 9]})
+
+    # Convert the dataframe to markdown
+    markdown_str = df_to_markdown(df=df, file_name=f"{WRITE_PATH}/test_df_to_markdown.md")
+    assert "2897" in markdown_str

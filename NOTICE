@@ -1,5 +1,5 @@
 ===============================================================================
-                                 NOTICE FILE
+                          NOTICE FILE
 ===============================================================================
 
 This product includes software developed by LinkedIn Corp.
@@ -27,12 +27,36 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ===============================================================================
-   Third-party software included in this product:
+    Third-party software included in this product:
 ===============================================================================
 
-This product includes/uses Jinja2 (https://github.com/pallets/jinja)
-Copyright (c) [See project source for details - pallets projects contributors]
-License: BSD 3-Clause License
+This product includes/uses dash (https://github.com/plotly/dash)
+Copyright (c) [See project source for details - Plotly Technologies Inc.]
+License: MIT License
+
+---
+
+This product includes/uses duckdb (https://github.com/duckdb/duckdb)
+Copyright (c) [See project source for details - DuckDB Labs and contributors]
+License: MIT License
+
+---
+
+This product includes/uses mashumaro (https://github.com/Fatal1ty/mashumaro)
+Copyright (c) [See project source for details - Aleksandr Lukianov and contributors]
+License: Apache License 2.0
+
+---
+
+This product includes/uses mkdocs (https://github.com/mkdocs/mkdocs)
+Copyright (c) [See project source for details - MkDocs contributors]
+License: BSD 2-Clause License
+
+---
+
+This product includes/uses mkdocs-material (https://github.com/squidfunk/mkdocs-material)
+Copyright (c) [See project source for details - Martin Donath and contributors]
+License: MIT License
 
 ---
 
@@ -48,20 +72,26 @@ License: BSD 3-Clause License
 
 ---
 
-This product includes/uses scipy (https://github.com/scipy/scipy)
-Copyright (c) [See project source for details - SciPy developers]
-License: BSD 3-Clause License
-
----
-
-This product includes/uses statsmodels (https://github.com/statsmodels/statsmodels)
-Copyright (c) [See project source for details - statsmodels developers]
-License: BSD 3-Clause License
+This product includes/uses playwright (https://github.com/microsoft/playwright-python)
+Copyright (c) [See project source for details - Microsoft]
+License: Apache License 2.0
 
 ---
 
 This product includes/uses plotly (https://github.com/plotly/plotly.py)
 Copyright (c) [See project source for details - Plotly Technologies Inc.]
+License: MIT License
+
+---
+
+This product includes/uses poetry (https://github.com/python-poetry/poetry)
+Copyright (c) [See project source for details - Sébastien Eustace and contributors]
+License: MIT License
+
+---
+
+This product includes/uses pre-commit (https://github.com/pre-commit/pre-commit)
+Copyright (c) [See project source for details - Anthony Sottile and contributors]
 License: MIT License
 
 ---
@@ -72,26 +102,50 @@ License: Apache License 2.0
 
 ---
 
-This product includes/uses tabulate (https://github.com/astanin/python-tabulate)
-Copyright (c) [See project source for details - Sergey Astanin and contributors]
-License: MIT License
-
----
-
-This product includes/uses presto-python-client (https://github.com/prestodb/presto-python-client)
-Copyright (c) [See project source for details - Presto Team/prestodb contributors]
-License: Apache License 2.0
-
----
-
 This product includes/uses pytest (https://github.com/pytest-dev/pytest)
 Copyright (c) [See project source for details - Holger Krekel and others]
 License: MIT License
 
 ---
 
-This product includes/uses poetry (https://github.com/python-poetry/poetry)
-Copyright (c) [See project source for details - Sébastien Eustace and contributors]
+This product includes/uses pytest-cov (https://github.com/pytest-dev/pytest-cov)
+Copyright (c) [See project source for details - Marc Schlaich and others]
 License: MIT License
+
+---
+
+This product includes/uses ruff (https://github.com/astral-sh/ruff)
+Copyright (c) [See project source for details - Astral Software Inc.]
+License: Apache License 2.0
+
+---
+
+This product includes/uses scipy (https://github.com/scipy/scipy)
+Copyright (c) [See project source for details - SciPy developers]
+License: BSD 3-Clause License
+
+---
+
+This product includes/uses sqlglot (https://github.com/tobymao/sqlglot)
+Copyright (c) [See project source for details - Toby Mao and contributors]
+License: MIT License
+
+---
+
+This product includes/uses tabulate (https://github.com/astanin/python-tabulate)
+Copyright (c) [See project source for details - Sergey Astanin and contributors]
+License: MIT License
+
+---
+
+This product includes/uses trino (https://github.com/trinodb/trino-python-client)
+Copyright (c) [See project source for details - Trino Software Foundation]
+License: Apache License 2.0
+
+---
+
+This product includes/uses webcolors (https://github.com/ubernostrum/webcolors)
+Copyright (c) [See project source for details - James Bennett and contributors]
+License: BSD 3-Clause License
 
 ---

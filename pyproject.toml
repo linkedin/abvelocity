@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "abvelocity"
-version = "0.1.0"
+version = "0.2.1"
 description = "A Python package for accelerating data-driven experiments and analysis"
 authors = ["Reza Hosseini <reza1317@gmail.com>"]
 license = "BSD-2-Clause"
@@ -13,23 +13,44 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: BSD License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
-packages = [{ include = "abvelocity", from = "abvelocity/src" }]
+packages = [{ include = "abvelocity", from = "src" }]
 
 [tool.poetry.dependencies]
-python = "^3.10"
-Jinja2 = "^3.1.0"
+python = "^3.12"
+# Core numeric / data stack — required
 numpy = "^2.0.0"
 pandas = "^2.2.0"
 scipy = "^1.13.0"
-statsmodels = "^0.14.0"
+# Visualization — required (plotly drives all plot_* / *_viz helpers)
 plotly = "^5.24.0"
+# Config + SQL utilities — required
 pyhocon = "^0.3.0"
+sqlglot = "^25.34.0"
+# Runtime deps with no direct imports but required at call sites:
+#   tabulate: used implicitly by pandas `df.to_markdown()` in utils/df_to_markdown.py
 tabulate = "^0.9.0"
-presto-python-client = "^0.8.0"
+# Sankey/color helpers (journey/viz)
+webcolors = "^24.11.0"
+# NEW in ev15 ───────────────────────────────────────────────
+duckdb = "^1.1.0"           # get_data/duckdb_cursor.py
+trino = "^0.330.0"          # get_data/presto_cursor.py (supersedes presto-python-client)
+mashumaro = "^3.13.0"       # used pervasively across mea/, param/, utils/, journey/param
+# Opt-in niche deps — not installed by default. Users enable via extras:
+#   pip install abvelocity[dash]   → journey/viz/create_configurable_dash.py
+#   pip install abvelocity[pdf]    → utils/html_to_pdf.py
+dash = {version = "^2.18.0", optional = true}
+playwright = {version = "^1.50.0", optional = true}
+# DROPPED in ev15 ───────────────────────────────────────────
+# Jinja2              — zero references in shipped modules (was unused in ev14 too)
+# statsmodels         — zero references in shipped modules (was unused in ev14 too)
+# presto-python-client — replaced by `trino` upstream
+
+[tool.poetry.extras]
+dash = ["dash"]
+pdf  = ["playwright"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
@@ -45,7 +66,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py312"
 select = ["E", "F", "W", "I", "UP", "B", "Q"]
 ignore = []
 

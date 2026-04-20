@@ -1,3 +1,0 @@
-metric,launch,delta,delta_percent,ci,ci_percent,delta_std,delta_sum,delta_sum_ci,z_value,p_value,sample_counts,impacted_counts
-metric1,(v1) launch,-3.34,-62.72,"(-3.66, -3.03)","(-68.64, -56.8)",0.16,-2903.37,"(-3177.54, -2629.2)",-20.76,0.00,"(335, 282)","(869, 869)"
-metric1,(v2) launch,3.70,69.55,"(3.36, 4.05)","(63.15, 75.96)",0.17,3219.54,"(2923.04, 3516.05)",21.28,0.00,"(335, 252)","(869, 869)"
