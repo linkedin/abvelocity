@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "abvelocity"
-version = "0.2.1"
-description = "A Python package for accelerating data-driven experiments and analysis"
+version = "0.3.0"
+description = "A Python package for accelerating data-driven experiments and analysis, including time-series forecasting and model selection"
 authors = ["Reza Hosseini <reza1317@gmail.com>"]
 license = "BSD-2-Clause"
 readme = "README.md"
@@ -38,14 +38,28 @@ webcolors = "^24.11.0"
 duckdb = "^1.1.0"           # get_data/duckdb_cursor.py
 trino = "^0.330.0"          # get_data/presto_cursor.py (supersedes presto-python-client)
 mashumaro = "^3.13.0"       # used pervasively across mea/, param/, utils/, journey/param
+# NEW in ev18 (ts / time-series) ───────────────────────────
+# Direct top-level imports surfaced by grepping ts/ src (excluding li/, std lib):
+scikit-learn = "~1.5.0"     # ts/algo, ts/model_selection, ts/gk (vendored greykite shim layer) — pinned to 1.5.x because 1.6+ tightens check_is_fitted in a way the vendored gk/ transformers don't satisfy, and 1.6+ also removed sklearn.utils._joblib re-export. Internal MP pins to 1.5.2 (see evelocity-ts/pinned.txt).
+statsmodels = "^0.14.0"     # ts/gk vendored greykite forecasting suite, ts/eval (re-added; was dropped in ev15)
+patsy = "^0.5.6"            # statsmodels formula DSL (used by ts/gk)
+holidays = "^0.55"          # ts/common/holiday — calendar features for forecasting
+cvxpy = "^1.5.0"            # ts/model_selection / ts/forecast_transforms convex optimization
+joblib = "^1.4.0"           # ts/algo parallelism + sklearn dep
+tqdm = "^4.66.0"            # ts/gk / ts/model_selection progress bars
+dill = "^0.3.8"             # ts/eval / ts/model_selection extended pickling
+python-dateutil = "^2.9.0"  # ts/common date arithmetic helpers
+pytz = "^2024.1"            # ts/common tz handling (paired with python-dateutil)
+overrides = "^7.3.0"        # ts/gk @overrides decorator for greykite class hierarchy
 # Opt-in niche deps — not installed by default. Users enable via extras:
 #   pip install abvelocity[dash]   → journey/viz/create_configurable_dash.py
 #   pip install abvelocity[pdf]    → utils/html_to_pdf.py
 dash = {version = "^2.18.0", optional = true}
 playwright = {version = "^1.50.0", optional = true}
-# DROPPED in ev15 ───────────────────────────────────────────
+# DROPPED in ev15, RE-ADDED in ev18 ─────────────────────────
+# statsmodels — re-added above; ts/gk needs it (vendored greykite uses statsmodels heavily)
+# DROPPED in ev15 (still gone in ev18) ──────────────────────
 # Jinja2              — zero references in shipped modules (was unused in ev14 too)
-# statsmodels         — zero references in shipped modules (was unused in ev14 too)
 # presto-python-client — replaced by `trino` upstream
 
 [tool.poetry.extras]
@@ -59,6 +73,8 @@ ruff = "^0.6.9"
 mkdocs = "^1.6.0"
 mkdocs-material = "^9.6.11"
 pre-commit = "^3.8.0"
+# Test-only — 20 ts/gk test files use LogCapture for log-output assertions.
+testfixtures = "^8.3.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
