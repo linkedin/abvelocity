@@ -50,9 +50,7 @@ from abvelocity.core.param.metric_info import MetricInfo
 from abvelocity.core.sim.examples import simulate_data_multi1, simulate_data_three2
 from abvelocity.core.sim.sim import EXPT_UNIT_COL
 
-SAVE_PATH = str(
-    Path(__file__).parents[4].joinpath("docs/static/test-results/mea_assumption_check/").resolve()
-)
+SAVE_PATH = str(Path(__file__).parents[4].joinpath("docs/static/test-results/mea_assumption_check/").resolve())
 os.makedirs(SAVE_PATH, exist_ok=True)
 
 METHOD = "simple"
@@ -67,16 +65,19 @@ def _make_analysis_info(n_expts):
     expt_info_list = [
         ExptInfo(
             name=f"Expt {i}",
-            test_key=None, experiment_id=None, segment_id=None,
-            start_date=None, end_date=None, variants=None, control_label=None,
+            test_key=None,
+            experiment_id=None,
+            segment_id=None,
+            start_date=None,
+            end_date=None,
+            variants=None,
+            control_label=None,
         )
         for i in range(n_expts)
     ]
     metrics = [Metric(numerator=UMetric(col="metric1")), Metric(numerator=UMetric(col="metric2"))]
     return AnalysisInfo(
-        multi_expt_info=MultiExptInfo(
-            expt_info_list=expt_info_list, merge_method="cross", expt_unit_col=EXPT_UNIT_COL
-        ),
+        multi_expt_info=MultiExptInfo(expt_info_list=expt_info_list, merge_method="cross", expt_unit_col=EXPT_UNIT_COL),
         metric_info_list=[MetricInfo(metrics=metrics)],
     )
 

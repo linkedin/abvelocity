@@ -15,9 +15,31 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # author: Reza Hosseini
 
+import hashlib
 from typing import Dict, Optional
 
 import pandas as pd
+
+
+def deterministic_table_uuid(df: pd.DataFrame) -> str:
+    """Return a stable 8-char uuid for the dataframe's content.
+
+    Used for ``Styler.to_html(table_uuid=...)`` so identical input
+    yields byte-identical HTML output across runs (no random class
+    names).  Hash is over the CSV serialization (column names + values),
+    so any pandas-supported dtype works — including tuple- or list-
+    typed columns common in MEA report frames (``ci``, ``sample_counts``,
+    etc.) that ``pd.util.hash_pandas_object`` rejects.
+
+    Args:
+        df: The dataframe whose content drives the uuid.
+
+    Returns:
+        8-character hex digest, stable for any df with the same column
+        names and value representations.
+    """
+    csv_signature = df.to_csv(index=False).encode(encoding="utf-8")
+    return hashlib.sha256(csv_signature).hexdigest()[:8]
 
 
 def df_to_html(
@@ -59,7 +81,7 @@ def df_to_html(
             # Take the intersection of the format_dict keys and DataFrame columns
             valid_format_dict = {k: v for k, v in format_dict.items() if k in df.columns}
             styler = styler.format(valid_format_dict)
-        df_html = styler.to_html(index=False)
+        df_html = styler.to_html(index=False, table_uuid=deterministic_table_uuid(df=df))
     else:
         df_html = to_html_format_bg(df=df, bg_colors=bg_colors, bg_cols=bg_cols, format_dict=format_dict)
 
@@ -149,7 +171,9 @@ def to_html_format_bg(
         valid_format_dict = {k: v for k, v in format_dict.items() if k in df.columns}
         styler = styler.format(valid_format_dict)
 
-    df_html = styler.apply(func, axis=1).to_html(index=False)
+    df_html = styler.apply(func, axis=1).to_html(
+        index=False, table_uuid=deterministic_table_uuid(df=df),
+    )
 
     df_html = df_html.replace("<table", '<table border="1"')
 

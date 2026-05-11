@@ -80,9 +80,7 @@ from abvelocity.core.param.metric import Metric, UMetric
 from abvelocity.core.param.metric_info import MetricInfo
 from abvelocity.core.sim.sim import EXPT_UNIT_COL, Sim
 
-SAVE_PATH = str(
-    Path(__file__).parents[4].joinpath("docs/static/test-results/mea/independent_vs_joint/").resolve()
-)
+SAVE_PATH = str(Path(__file__).parents[4].joinpath("docs/static/test-results/mea/independent_vs_joint/").resolve())
 os.makedirs(SAVE_PATH, exist_ok=True)
 
 METHOD = "simple"
@@ -91,6 +89,7 @@ METHOD = "simple"
 # ------------------------------------------------------------------ #
 #  Simulation helper
 # ------------------------------------------------------------------ #
+
 
 def simulate_independent_failure(
     population_size: int = 100_000,
@@ -157,6 +156,7 @@ def simulate_independent_failure(
 #  Fixtures
 # ------------------------------------------------------------------ #
 
+
 @pytest.fixture
 def sim():
     return simulate_independent_failure()
@@ -181,6 +181,7 @@ def analysis_info():
 #  Tests
 # ------------------------------------------------------------------ #
 
+
 def test_independent_picks_wrong_combination(sim, analysis_info):
     """Independent per-experiment analysis recommends launching both treatments,
     but MEA's joint analysis shows (c1, t2) is optimal and (t1, t2) is the worst.
@@ -200,12 +201,8 @@ def test_independent_picks_wrong_combination(sim, analysis_info):
 
     # Independent analysis says: both treatments are positive → launch (t1, t2).
     # With 100k units and these effect sizes, both should be positive.
-    assert univar_effect_expt1 > 0, (
-        f"Expected univariate Expt 1 effect > 0, got {univar_effect_expt1:.3f}"
-    )
-    assert univar_effect_expt2 > 0, (
-        f"Expected univariate Expt 2 effect > 0, got {univar_effect_expt2:.3f}"
-    )
+    assert univar_effect_expt1 > 0, f"Expected univariate Expt 1 effect > 0, got {univar_effect_expt1:.3f}"
+    assert univar_effect_expt2 > 0, f"Expected univariate Expt 2 effect > 0, got {univar_effect_expt2:.3f}"
     independent_decision = ("treatment", "treatment")
 
     # --- Step 2: MEA joint analysis ---
@@ -228,11 +225,7 @@ def test_independent_picks_wrong_combination(sim, analysis_info):
 
     # --- Step 3: verify MEA identifies (c1, t2) as best ---
     # We examine the cell means directly as a simpler verification.
-    cell_means = (
-        df.groupby(["variant_1", "variant_2"])["metric1"]
-        .mean()
-        .reset_index()
-    )
+    cell_means = df.groupby(["variant_1", "variant_2"])["metric1"].mean().reset_index()
     cell_means = cell_means.set_index(["variant_1", "variant_2"])["metric1"]
 
     baseline = cell_means[("control", "control")]
@@ -243,25 +236,19 @@ def test_independent_picks_wrong_combination(sim, analysis_info):
     # (c1, t2) should be the best combination
     best_combo_effect = max(effect_t1_c2, effect_c1_t2, effect_t1_t2)
     assert effect_c1_t2 == best_combo_effect, (
-        f"Expected (c1, t2) to be best but got: "
-        f"(t1,c2)={effect_t1_c2:.2f}, (c1,t2)={effect_c1_t2:.2f}, (t1,t2)={effect_t1_t2:.2f}"
+        f"Expected (c1, t2) to be best but got: " f"(t1,c2)={effect_t1_c2:.2f}, (c1,t2)={effect_c1_t2:.2f}, (t1,t2)={effect_t1_t2:.2f}"
     )
 
     # (t1, t2) — the sequential decision — should be the WORST combination
     worst_combo_effect = min(effect_t1_c2, effect_c1_t2, effect_t1_t2)
     assert effect_t1_t2 == worst_combo_effect, (
-        f"Expected (t1, t2) to be worst but got: "
-        f"(t1,c2)={effect_t1_c2:.2f}, (c1,t2)={effect_c1_t2:.2f}, (t1,t2)={effect_t1_t2:.2f}"
+        f"Expected (t1, t2) to be worst but got: " f"(t1,c2)={effect_t1_c2:.2f}, (c1,t2)={effect_c1_t2:.2f}, (t1,t2)={effect_t1_t2:.2f}"
     )
 
     # The independent per-experiment decision is wrong: it picks the worst, not the best.
     assert independent_decision == ("treatment", "treatment")
-    assert effect_t1_t2 < 0, (
-        f"Expected (t1, t2) effect < 0, got {effect_t1_t2:.2f}"
-    )
-    assert effect_c1_t2 > 0, (
-        f"Expected (c1, t2) effect > 0, got {effect_c1_t2:.2f}"
-    )
+    assert effect_t1_t2 < 0, f"Expected (t1, t2) effect < 0, got {effect_t1_t2:.2f}"
+    assert effect_c1_t2 > 0, f"Expected (c1, t2) effect > 0, got {effect_c1_t2:.2f}"
 
     # Print summary for inclusion in paper / test report.
     print("\n" + "=" * 70)
