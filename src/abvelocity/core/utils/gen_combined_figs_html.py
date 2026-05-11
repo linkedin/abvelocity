@@ -22,6 +22,8 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 
+from abvelocity.core.utils.print_to_html import deterministic_plotly_div_id
+
 
 def gen_combined_figs_html(
     fig_dict: Dict[str, go.Figure],
@@ -61,11 +63,18 @@ def gen_combined_figs_html(
                 trace.showlegend = col == 1
                 grid_fig.add_trace(trace, row=row, col=col)
         grid_fig.update_layout(height=row_height * n_rows, template="plotly_white")
-        html_str = f"<html><body>{pio.to_html(grid_fig, full_html=False)}</body></html>"
+        grid_html = pio.to_html(
+            grid_fig, full_html=False,
+            div_id=deterministic_plotly_div_id(figure=grid_fig),
+        )
+        html_str = f"<html><body>{grid_html}</body></html>"
     else:
         html_str = ""
         for fig_name, fig in fig_dict.items():
-            fig_html = pio.to_html(fig, full_html=False)
+            fig_html = pio.to_html(
+                fig, full_html=False,
+                div_id=deterministic_plotly_div_id(figure=fig),
+            )
             html_str += f"<h3>{fig_name}</h3><div style='margin-bottom: 30px;'>{fig_html}</div>"
         html_str = f"<html><body>{html_str}</body></html>"
 

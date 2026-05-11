@@ -570,10 +570,19 @@ class Seq(ABC):
             None,  # Default to None if the method is not found
         )
 
-    def aug_agg_time(self, table_name: str, group_by_cols: Optional[list[str]] = None):
+    def aug_agg_time(
+        self,
+        table_name: str,
+        group_by_cols: Optional[list[str]] = None,
+        conditions: Optional[List[str]] = None,
+    ):
         """
         Transforms the `table_name` to include the additional time column
         and adds the new column to `group_by_cols`.
+
+        When conditions are provided, they are injected into the innermost
+        subquery so that the query engine can push predicates down to the
+        table scan instead of reading the full table first.
         """
         if not self.time_col_format:
             raise ValueError("Need to set `time_col_format` in `Seq` class to use `gen_seq_summary_query`")
@@ -584,6 +593,7 @@ class Seq(ABC):
             time_col_format=self.time_col_format,
             new_time_col=AGG_TIME,
             time_unit=self.time_unit,
+            conditions=conditions if conditions else [],
         ).gen()
 
         # Create group_by_cols_w_time which includes group_by_cols and the new time col
@@ -678,8 +688,12 @@ class Seq(ABC):
         group_by_parts = []
 
         group_by_cols_w_time = group_by_cols
+        # When group_by_time is True, push conditions into the inner subquery
+        # via aug_agg_time so Trino can push predicates to the table scan
+        outer_conditions = conditions
         if group_by_time:
-            table_name, group_by_cols, group_by_cols_w_time = self.aug_agg_time(table_name, group_by_cols)
+            table_name, group_by_cols, group_by_cols_w_time = self.aug_agg_time(table_name, group_by_cols, conditions=conditions)
+            outer_conditions = None
 
         # Handle Group By Columns
         if group_by_cols_w_time:
@@ -700,10 +714,10 @@ class Seq(ABC):
 
         query = f"SELECT {', '.join(select_parts)}\nFROM {table_name}"
 
-        # Add WHERE clause if conditions are provided
-        if conditions:
+        # Add WHERE clause if conditions are provided (only when not already pushed inside)
+        if outer_conditions:
             # Combine all conditions with ' AND '
-            query += f"\nWHERE {' AND '.join(conditions)}"
+            query += f"\nWHERE {' AND '.join(outer_conditions)}"
 
         if group_by_parts:
             query += f"\nGROUP BY {', '.join(group_by_parts)}"
@@ -828,8 +842,12 @@ class Seq(ABC):
 
         table_name = self.get_seq_info(deduping_method).output_table_name
 
+        # When group_by_time is True, push conditions into the inner subquery
+        # via aug_agg_time so Trino can push predicates to the table scan
+        outer_conditions = conditions
         if group_by_time:
-            table_name, group_by_cols, group_by_cols_w_time = self.aug_agg_time(table_name, group_by_cols)
+            table_name, group_by_cols, group_by_cols_w_time = self.aug_agg_time(table_name, group_by_cols, conditions=conditions)
+            outer_conditions = []
 
         # Handle Group By Columns
         if group_by_time:
@@ -843,7 +861,7 @@ class Seq(ABC):
             require_all_numerator=require_all_numerator,
             require_all_denominator=require_all_denominator,
             count_distinct_col=count_distinct_col,
-            conditions=conditions,
+            conditions=outer_conditions,
             group_by_cols=group_by_cols,
             col_name=col_name,
         ).gen()

@@ -19,11 +19,27 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # Original author: Reza Hosseini
+import hashlib
 import pprint
 from pathlib import Path
 from typing import Any, Optional
 
 import plotly.graph_objects as go
+
+
+def deterministic_plotly_div_id(figure: go.Figure) -> str:
+    """Stable ``div_id`` for a Plotly figure based on its JSON content.
+
+    Used for ``Figure.to_html(div_id=...)`` so identical input yields
+    byte-identical HTML (no random div ids per call).
+
+    Args:
+        figure: The Plotly figure.
+
+    Returns:
+        ``"fig_"`` + 8-char hex digest of ``figure.to_json()``.
+    """
+    return "fig_" + hashlib.sha256(figure.to_json().encode(encoding="utf-8")).hexdigest()[:8]
 
 
 def print_to_html(
@@ -56,8 +72,14 @@ def print_to_html(
         html_output += f"<p style='text-align: center;'><strong>{caption}</strong></p>"
 
     if isinstance(data_to_convert, go.Figure):
-        # Handle Plotly figure
-        html_output += f'<div style="width: {width}; height: {height};">' + data_to_convert.to_html(full_html=False, include_plotlyjs="cdn") + "</div>"
+        # Handle Plotly figure with content-based div_id so re-runs of
+        # the same figure produce byte-identical HTML.
+        plotly_html = data_to_convert.to_html(
+            full_html=False,
+            include_plotlyjs="cdn",
+            div_id=deterministic_plotly_div_id(figure=data_to_convert),
+        )
+        html_output += f'<div style="width: {width}; height: {height};">{plotly_html}</div>'
 
     elif isinstance(data_to_convert, str):
         text = data_to_convert

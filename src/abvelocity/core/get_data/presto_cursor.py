@@ -23,10 +23,11 @@
 
 import getpass
 from dataclasses import dataclass
-from typing import Optional
+from typing import FrozenSet, Optional, Sequence
 
 import pandas as pd
 import trino
+from abvelocity.core.get_data import sql_inline_writer
 from abvelocity.core.get_data.cursor import DEFAULT_MAX_RETRIES, DEFAULT_RETRY_DELAY_SECONDS, Cursor
 from trino.auth import OAuth2Authentication
 
@@ -155,21 +156,86 @@ class PrestoCursor(Cursor):
 
     def write_pandas_df(
         self,
-        df: "pd.DataFrame",
+        df: pd.DataFrame,
         table_name: str,
         mode: str = "append",
-    ) -> None:
-        """Not yet implemented for Presto/Trino.
+        partition_col: Optional[str] = None,
+        partition_value: Optional[str] = None,
+        date_columns: Optional[FrozenSet[str]] = None,
+        chunk_size: int = sql_inline_writer.DEFAULT_INSERT_CHUNK_SIZE,
+    ) -> int:
+        """Write a pandas DataFrame to a Trino table via inline-VALUES INSERT.
 
-        Trino has no native pandas write path.  The recommended approach is
-        to write the DataFrame to parquet on shared storage and point a Trino
-        external table at it.
+        Trino's Python client has no ``executemany``; this method
+        renders the df as inline SQL ``VALUES`` literals and INSERTs
+        in chunks. Suitable for laptop / dev volumes (a few thousand
+        rows). For large-scale writes, write parquet to shared
+        storage and register an external Trino table instead.
 
-        Raises:
-            NotImplementedError: Always.
+        Args:
+            df: DataFrame whose columns are the target column list.
+                ``NaN`` is rendered as SQL ``NULL``.
+            table_name: Fully-qualified target table.
+            mode: ``"append"`` (INSERT only) or
+                ``"overwrite_partition"`` (DELETE WHERE
+                partition_col=value, then INSERT).
+            partition_col: Required for ``"overwrite_partition"``.
+            partition_value: Required for ``"overwrite_partition"``.
+            date_columns: Columns to render as ``DATE 'YYYY-MM-DD'``
+                literals.
+            chunk_size: Max rows per INSERT statement. Default
+                :data:`~abvelocity.core.get_data.sql_inline_writer.DEFAULT_INSERT_CHUNK_SIZE`.
+
+        Returns:
+            Number of rows inserted.
         """
-        raise NotImplementedError(
-            "write_pandas_df is not supported for PrestoCursor. "
-            "Write the DataFrame to parquet on shared storage and register "
-            "it as a Trino external table instead."
+        return sql_inline_writer.write_pandas_df(
+            cursor=self,
+            df=df,
+            table_name=table_name,
+            mode=mode,
+            partition_col=partition_col,
+            partition_value=partition_value,
+            date_columns=date_columns or sql_inline_writer.EMPTY_DATE_COLUMNS,
+            chunk_size=chunk_size,
+        )
+
+    def upsert_pandas_df(
+        self,
+        df: pd.DataFrame,
+        table_name: str,
+        key_cols: Sequence[str],
+        date_columns: Optional[FrozenSet[str]] = None,
+        chunk_size: int = sql_inline_writer.DEFAULT_INSERT_CHUNK_SIZE,
+    ) -> int:
+        """Multi-key delete-then-insert. Rebuilds rows whose key tuples appear in ``df``.
+
+        Issues one ``DELETE FROM table WHERE (k1, k2, ...) IN
+        ((...), ...)`` for the distinct ``key_cols`` tuples in ``df``,
+        then INSERTs in chunks. Idempotent: running with the same
+        ``df`` twice leaves the table in the same state. The single
+        ``IN``-tuple DELETE keeps sibling rows untouched (rows whose
+        key tuples aren't in ``df``).
+
+        Args:
+            df: Source DataFrame; must include every column in
+                ``key_cols`` plus the rest of the target schema.
+            table_name: Fully-qualified target table.
+            key_cols: Columns whose distinct values define the rows
+                to delete before inserting. Order matters for the
+                ``IN``-tuple positional comparison.
+            date_columns: Columns to render as ``DATE 'YYYY-MM-DD'``
+                literals (used in both DELETE and INSERT).
+            chunk_size: Max rows per INSERT statement.
+
+        Returns:
+            Number of rows inserted.
+        """
+        return sql_inline_writer.upsert_pandas_df(
+            cursor=self,
+            df=df,
+            table_name=table_name,
+            key_cols=key_cols,
+            date_columns=date_columns or sql_inline_writer.EMPTY_DATE_COLUMNS,
+            chunk_size=chunk_size,
         )

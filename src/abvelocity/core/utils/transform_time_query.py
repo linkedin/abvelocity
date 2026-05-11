@@ -20,8 +20,8 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # Original author: Reza Hosseini
 
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 
 def get_time_conversion_expression(
@@ -105,16 +105,28 @@ class TransformTimeQuery:
     time_unit: Optional[str] = None
     """The unit to truncate the timestamp to ('second', 'minute', 'hour', 'day').
     If None, no truncation is applied. Defaults to None."""
+    conditions: List[str] = field(default_factory=list)
+    """Optional list of SQL WHERE conditions to apply inside the subquery.
+    When provided, the WHERE clause is injected at the innermost table level,
+    ensuring that query engines like Trino can push predicates down to the table scan."""
 
     def gen(self) -> str:
         """
         Generates the final SQL query to add a new column with a converted timestamp.
+
+        When conditions are provided, they are applied inside the subquery so that
+        the query engine can push predicates down to the table scan, avoiding full
+        table reads.
 
         Returns:
             str: The generated SQL query.
         """
         # Call the standalone utility function
         time_expr = get_time_conversion_expression(self.original_time_col, self.time_col_format, self.new_time_col, self.time_unit)
+        # Build WHERE clause for conditions to push into inner subquery
+        where_clause = ""
+        if self.conditions:
+            where_clause = f"\nWHERE {' AND '.join(self.conditions)}"
         # Enclosing the entire subquery in parentheses
-        query = f"(SELECT *,\n" f"       {time_expr}\n" f"FROM ({self.table_name}))"
+        query = f"(SELECT *,\n       {time_expr}\nFROM ({self.table_name}){where_clause})"
         return query
