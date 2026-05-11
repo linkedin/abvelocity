@@ -160,3 +160,79 @@ def test_transform_time_query_plural_time_unit():
     )
     expected_query = "(SELECT *,\n" "       DATE_TRUNC('SECOND', FROM_UNIXTIME(my_time / 1000.0)) AS truncated_time\n" "FROM (my_table))"
     assert query_generator.gen() == expected_query
+
+
+def test_transform_time_query_with_single_condition():
+    """Test that a single WHERE condition is injected inside the subquery."""
+    query_generator = TransformTimeQuery(
+        table_name="my_events",
+        original_time_col="event_time",
+        time_col_format="unix_ms",
+        new_time_col="agg_time",
+        time_unit="day",
+        conditions=["etl_date >= '2026-03-01-00'"],
+    )
+    expected_query = (
+        "(SELECT *,\n" "       DATE_TRUNC('DAY', FROM_UNIXTIME(event_time / 1000.0)) AS agg_time\n" "FROM (my_events)\n" "WHERE etl_date >= '2026-03-01-00')"
+    )
+    assert query_generator.gen() == expected_query
+
+
+def test_transform_time_query_with_multiple_conditions():
+    """Test that multiple WHERE conditions are ANDed inside the subquery."""
+    query_generator = TransformTimeQuery(
+        table_name="seq_table",
+        original_time_col="seq_start_time",
+        time_col_format="unix_ms",
+        new_time_col="agg_time",
+        time_unit="day",
+        conditions=["etl_date >= '2026-03-01-00'", "country_code = 'US'", "pm_pagekey = 'desktop'"],
+    )
+    expected_query = (
+        "(SELECT *,\n"
+        "       DATE_TRUNC('DAY', FROM_UNIXTIME(seq_start_time / 1000.0)) AS agg_time\n"
+        "FROM (seq_table)\n"
+        "WHERE etl_date >= '2026-03-01-00' AND country_code = 'US' AND pm_pagekey = 'desktop')"
+    )
+    assert query_generator.gen() == expected_query
+
+
+def test_transform_time_query_with_empty_conditions():
+    """Test that empty conditions list produces no WHERE clause (same as default)."""
+    query_generator = TransformTimeQuery(
+        table_name="my_table",
+        original_time_col="ts",
+        time_col_format="unix_ms",
+        new_time_col="agg_time",
+        time_unit="hour",
+        conditions=[],
+    )
+    expected_query = "(SELECT *,\n" "       DATE_TRUNC('HOUR', FROM_UNIXTIME(ts / 1000.0)) AS agg_time\n" "FROM (my_table))"
+    assert query_generator.gen() == expected_query
+
+
+def test_transform_time_query_conditions_with_subquery_table():
+    """Test that conditions are injected even when table_name is already a subquery."""
+    subquery = "(SELECT * FROM raw_events)"
+    query_generator = TransformTimeQuery(
+        table_name=subquery,
+        original_time_col="event_time",
+        time_col_format="timestamp",
+        new_time_col="agg_time",
+        time_unit="day",
+        conditions=["status = 'active'"],
+    )
+    expected_query = "(SELECT *,\n" "       DATE_TRUNC('DAY', event_time) AS agg_time\n" f"FROM ({subquery})\n" "WHERE status = 'active')"
+    assert query_generator.gen() == expected_query
+
+
+def test_transform_time_query_no_conditions_backward_compatible():
+    """Test that existing behavior without conditions is preserved."""
+    query_generator = TransformTimeQuery(
+        table_name="my_raw_events",
+        original_time_col="event_timestamp_ms",
+        time_col_format="unix_ms",
+        new_time_col="processed_ts",
+    )
+    expected_query = "(SELECT *,\n" "       FROM_UNIXTIME(event_timestamp_ms / 1000.0) AS processed_ts\n" "FROM (my_raw_events))"
+    assert query_generator.gen() == expected_query

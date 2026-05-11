@@ -28,14 +28,126 @@ from typing import Any, List, Optional, Tuple
 
 import pandas as pd
 
+# pyspark 3.1.1 ↔ pandas 2.x compat shim.
+#
+# pyspark's ``SparkSession._convert_from_pandas`` (no-schema branch of
+# ``createDataFrame(pdf)``) iterates the input via ``pdf.iteritems()``.
+# pandas 1.5 deprecated ``DataFrame.iteritems`` and pandas 2.0 removed
+# it; the equivalent is ``DataFrame.items``. Cluster-side Spark is
+# pinned at 3.1, our pandas at 2.2.x — they don't agree.
+#
+# Fix at the spot the bug fires: if ``iteritems`` is missing, alias it
+# to ``items`` on the class. Idempotent (the ``hasattr`` guard makes
+# it a no-op once installed and on pandas <2.0). Same idiom as
+# "if df.iteritems() doesn't exist, use df.items() instead", just
+# expressed at class level so pyspark's internal call resolves.
+if not hasattr(pd.DataFrame, "iteritems"):
+    pd.DataFrame.iteritems = pd.DataFrame.items
+
 try:
     from pyspark.sql import SparkSession
     from pyspark.sql.functions import lit
+    from pyspark.sql.types import (
+        BooleanType,
+        DoubleType,
+        FloatType,
+        IntegerType,
+        LongType,
+        StringType,
+        StructField,
+        StructType,
+        TimestampType,
+    )
 except ModuleNotFoundError:
     lit = None  # type: ignore[assignment]
 
 from abvelocity.core.get_data.cursor import DEFAULT_MAX_RETRIES, DEFAULT_RETRY_DELAY_SECONDS, Cursor, SqlQueryResult
 from abvelocity.core.utils.sql_conversion import SqlConversion
+
+# Spark dtype strings (as returned by ``DataFrame.dtypes``) that need
+# the string-cast workaround in ``spark_df_to_pandas`` below.
+SPARK_TEMPORAL_DTYPES = ("timestamp", "date")
+
+# Map pandas dtype string → Spark type. Anything not listed falls back to
+# StringType, which is the safe lossy default.
+PANDAS_DTYPE_TO_SPARK_TYPE = {
+    "object": "StringType",
+    "int64": "LongType",
+    "int32": "IntegerType",
+    "float64": "DoubleType",
+    "float32": "FloatType",
+    "bool": "BooleanType",
+    "datetime64[ns]": "TimestampType",
+}
+
+
+def spark_schema_from_pandas_dtypes(df: "pd.DataFrame") -> "StructType":
+    """Build a Spark ``StructType`` from a pandas DataFrame's dtypes.
+
+    Why this exists: pyspark 3.1's ``createDataFrame(pdf)`` (no-schema branch)
+    infers the schema by scanning values via ``_inferSchemaFromList``. That
+    raises ``ValueError: Some of types cannot be determined after inferring``
+    whenever a column is all-None / all-NaN — common for forecast outputs
+    where future-dated rows have a null ``actual``. Pandas dtypes know each
+    column's type even when every value is NaN, so deriving the Spark schema
+    from dtypes sidesteps the inference path entirely.
+
+    Args:
+        df: Source pandas DataFrame.
+
+    Returns:
+        A ``StructType`` with one nullable ``StructField`` per column. Unknown
+        dtype strings fall back to ``StringType()``.
+    """
+    spark_types = {
+        "StringType": StringType,
+        "LongType": LongType,
+        "IntegerType": IntegerType,
+        "DoubleType": DoubleType,
+        "FloatType": FloatType,
+        "BooleanType": BooleanType,
+        "TimestampType": TimestampType,
+    }
+    fields = []
+    for col_name in df.columns:
+        dtype_name = str(df[col_name].dtype)
+        spark_type_name = PANDAS_DTYPE_TO_SPARK_TYPE.get(dtype_name, "StringType")
+        spark_type = spark_types[spark_type_name]()
+        fields.append(StructField(col_name, spark_type, nullable=True))
+    return StructType(fields)
+
+
+def spark_df_to_pandas(spark_df: Any) -> pd.DataFrame:
+    """``toPandas()`` with a workaround for the pyspark 3.1.x ↔ pandas 2.2+ skew.
+
+    LI-shaded ``pyspark`` 3.1.1 (the version the holdem grid ships)
+    funnels TIMESTAMP / DATE columns through a pandas ``astype('datetime64')``
+    call when materializing — that emits a unit-less dtype string,
+    which ``pandas`` 2.2+ rejects, blowing up the entire conversion. We
+    sidestep the broken path entirely by casting the affected columns
+    to STRING in Spark first (no astype involved), pulling the frame
+    over, then restoring the columns as proper ``datetime64[ns]`` via
+    :func:`pandas.to_datetime`. Cheaper than dragging ``pyarrow`` into
+    abvelocity's dep tree.
+
+    Args:
+        spark_df: A pyspark DataFrame. Anything with a ``dtypes`` list,
+            a ``withColumn`` method, ``__getitem__`` for column access,
+            and a ``toPandas`` method works (so test mocks can stand
+            in).
+
+    Returns:
+        ``pandas.DataFrame`` — same row count, same columns, with
+        TIMESTAMP / DATE columns rehydrated to ``datetime64[ns]``.
+    """
+    temporal_cols = [name for name, dtype in spark_df.dtypes if dtype in SPARK_TEMPORAL_DTYPES]
+    casted = spark_df
+    for col_name in temporal_cols:
+        casted = casted.withColumn(col_name, casted[col_name].cast("string"))
+    df = casted.toPandas()
+    for col_name in temporal_cols:
+        df[col_name] = pd.to_datetime(df[col_name])
+    return df
 
 
 @dataclass
@@ -200,7 +312,7 @@ class SparkCursor(Cursor):
 
         if self._spark_df is not None:
             # toPandas() materializes data to driver memory - use only for small data
-            df = self._spark_df.toPandas()
+            df = spark_df_to_pandas(self._spark_df)
             end_time = time.time()
             query_time_taken = end_time - start_time
             size_in_megabytes = sys.getsizeof(df) / 10**6 if df is not None else 0
@@ -287,6 +399,7 @@ class SparkCursor(Cursor):
         data_format: Optional[str] = None,
         partition_col: Optional[str] = None,
         partition_value: Optional[str] = None,
+        schema: Optional[Any] = None,
     ) -> None:
         """Write a pandas DataFrame into a Spark/Hive table.
 
@@ -301,8 +414,19 @@ class SparkCursor(Cursor):
             data_format: Storage format, e.g. ``"orc"`` or ``"parquet"``.
             partition_col: Column name to partition by.
             partition_value: Required when ``partition_col`` is set.
+            schema: Optional Spark ``StructType`` to drive the conversion.
+                When ``None`` (default), the schema is built from the
+                pandas dtypes via :func:`spark_schema_from_pandas_dtypes`,
+                which sidesteps pyspark 3.1's value-inference path and
+                avoids ``ValueError: Some of types cannot be determined
+                after inferring`` on all-None columns. Pass an explicit
+                schema when the caller has a stronger type contract than
+                the dtype mapping (e.g. exact integer width, nested types,
+                strict timezone settings).
         """
-        spark_df = self.spark_session.createDataFrame(df)
+        if schema is None:
+            schema = spark_schema_from_pandas_dtypes(df)
+        spark_df = self.spark_session.createDataFrame(df, schema=schema)
         self.write_spark_df(
             df=spark_df,
             table_name=table_name,

@@ -82,3 +82,45 @@ def test_construct_query_with_count_distinct():
     assert query == (
         "SELECT member_id, COUNT(DISTINCT member_id) AS dau" " FROM some_table WHERE datepartition BETWEEN '2022-01-01' AND '2022-01-31' GROUP BY 1"
     )
+
+
+def test_pad_zero_hour_suffix_appends_dash_00_to_both_bounds():
+    """``pad_zero_hour_suffix=True`` is the Blah ``datepartition`` case.
+
+    Without padding, ``BETWEEN '2026-04-30' AND '2026-04-30'`` against
+    a column whose values are like ``'2026-04-30-00'`` would silently
+    drop the entire end-date partition (lex-string compare:
+    ``'2026-04-30-00' > '2026-04-30'``). Padding both bounds with
+    ``-00`` keeps the BETWEEN inclusive on both ends.
+    """
+    u_metrics_query = UMetricsQuery(
+        table_name="some_table",
+        date_col="datepartition",
+        pad_zero_hour_suffix=True,
+    )
+    query = u_metrics_query.construct(
+        start_date="2022-01-01",
+        end_date="2022-01-31",
+        metric_join_unit_col="member_id",
+        u_metrics=None,
+        condition=None,
+    )
+    assert query == "SELECT * FROM some_table WHERE datepartition BETWEEN '2022-01-01-00' AND '2022-01-31-00'"
+
+
+def test_pad_zero_hour_suffix_default_is_false_for_plain_date_columns():
+    """Default behavior (no padding) is unchanged for plain DATE columns."""
+    u_metrics_query = UMetricsQuery(
+        table_name="some_table",
+        date_col="event_date",
+    )
+    query = u_metrics_query.construct(
+        start_date="2022-01-01",
+        end_date="2022-01-31",
+        metric_join_unit_col="member_id",
+        u_metrics=None,
+        condition=None,
+    )
+    assert "BETWEEN '2022-01-01' AND '2022-01-31'" in query
+    # The padded form must NOT appear.
+    assert "-00" not in query

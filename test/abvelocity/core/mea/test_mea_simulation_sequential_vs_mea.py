@@ -63,24 +63,21 @@ from abvelocity.core.param.metric import Metric, UMetric
 from abvelocity.core.param.metric_info import MetricInfo
 from abvelocity.core.sim.sim import EXPT_UNIT_COL, Sim
 
-SAVE_PATH = str(
-    Path(__file__).parents[4].joinpath(
-        "docs/static/test-results/mea/sequential_vs_mea/"
-    ).resolve()
-)
+SAVE_PATH = str(Path(__file__).parents[4].joinpath("docs/static/test-results/mea/sequential_vs_mea/").resolve())
 os.makedirs(SAVE_PATH, exist_ok=True)
 
 METHOD = "simple"
 
 # Ground-truth effects (shared across all scenarios)
-EFFECT_1 = 3   # Expt 1 treatment effect
-EFFECT_2 = 4   # Expt 2 treatment effect
+EFFECT_1 = 3  # Expt 1 treatment effect
+EFFECT_2 = 4  # Expt 2 treatment effect
 INTERACTION = -10  # (treatment, treatment) interaction
 
 
 # ------------------------------------------------------------------ #
 #  Ground-truth calculation
 # ------------------------------------------------------------------ #
+
 
 def get_expected_delta(non_trigger_pct, launch_variant):
     """Compute the ground-truth expected MEA delta for a given launch combination.
@@ -103,9 +100,9 @@ def get_expected_delta(non_trigger_pct, launch_variant):
     trigger_rate = (100.0 - non_trigger_pct) / 100.0
 
     # Region trigger rates (for two experiments with the same trigger rate)
-    r11_rate = trigger_rate * trigger_rate          # both trigger
-    r10_rate = trigger_rate * (1 - trigger_rate)    # only Expt 1
-    r01_rate = (1 - trigger_rate) * trigger_rate    # only Expt 2
+    r11_rate = trigger_rate * trigger_rate  # both trigger
+    r10_rate = trigger_rate * (1 - trigger_rate)  # only Expt 1
+    r01_rate = (1 - trigger_rate) * trigger_rate  # only Expt 2
 
     # Effect of launching variant vs (control, control) in each region
     v1, v2 = launch_variant
@@ -170,6 +167,7 @@ def get_expected_delta(non_trigger_pct, launch_variant):
 # ------------------------------------------------------------------ #
 #  Simulation helpers
 # ------------------------------------------------------------------ #
+
 
 def simulate_two_experiments(
     non_trigger_pct: int,
@@ -249,8 +247,10 @@ def compute_three_way_analysis(df, non_trigger_pct):
     r00 = df[~v1_triggered & ~v2_triggered]
 
     results["region_sizes"] = {
-        "R11": len(r11), "R10": len(r10),
-        "R01": len(r01), "R00": len(r00),
+        "R11": len(r11),
+        "R10": len(r10),
+        "R01": len(r01),
+        "R00": len(r00),
         "total": len(df),
     }
 
@@ -299,15 +299,11 @@ def compute_three_way_analysis(df, non_trigger_pct):
     # R11 conditional on shipped Expt 1 variant
     r11_shipped = r11[r11["variant_1"] == seq_step1_decision]
     r11_cond_effect = (
-        r11_shipped.loc[r11_shipped["variant_2"] == "treatment", "metric1"].mean()
-        - r11_shipped.loc[r11_shipped["variant_2"] == "control", "metric1"].mean()
+        r11_shipped.loc[r11_shipped["variant_2"] == "treatment", "metric1"].mean() - r11_shipped.loc[r11_shipped["variant_2"] == "control", "metric1"].mean()
     )
 
     # R01 effect (Expt 1 not triggered, unaffected by shipping)
-    r01_effect = (
-        r01.loc[r01["variant_2"] == "treatment", "metric1"].mean()
-        - r01.loc[r01["variant_2"] == "control", "metric1"].mean()
-    )
+    r01_effect = r01.loc[r01["variant_2"] == "treatment", "metric1"].mean() - r01.loc[r01["variant_2"] == "control", "metric1"].mean()
 
     # Weighted by FULL region sizes (after shipping, all R11 has shipped variant)
     n_r11 = len(r11)
@@ -340,10 +336,7 @@ def compute_three_way_analysis(df, non_trigger_pct):
         - r11_shipped2.loc[r11_shipped2["variant_1"] == "control", "metric1"].mean()
     )
 
-    r10_effect = (
-        r10.loc[r10["variant_1"] == "treatment", "metric1"].mean()
-        - r10.loc[r10["variant_1"] == "control", "metric1"].mean()
-    )
+    r10_effect = r10.loc[r10["variant_1"] == "treatment", "metric1"].mean() - r10.loc[r10["variant_1"] == "control", "metric1"].mean()
 
     n_r10 = len(r10)
     w2_r11 = n_r11 / (n_r11 + n_r10)
@@ -367,10 +360,7 @@ def compute_three_way_analysis(df, non_trigger_pct):
     # ------------------------------------------------------------------
     # 3. Cell means in R11 (ground truth for the overlap region)
     # ------------------------------------------------------------------
-    cell_means = (
-        r11.groupby(["variant_1", "variant_2"])["metric1"]
-        .mean()
-    )
+    cell_means = r11.groupby(["variant_1", "variant_2"])["metric1"].mean()
     baseline = cell_means[("control", "control")]
     results["r11_cell_effects"] = {
         "(c1, c2)": 0.0,
@@ -406,6 +396,7 @@ def format_decision(combo):
 #  Tests
 # ------------------------------------------------------------------ #
 
+
 class TestLowOverlap:
     """Low overlap (30% trigger): both independent and sequential fail."""
 
@@ -433,8 +424,7 @@ class TestLowOverlap:
         # --- Sequential (Expt 1 first): ship t1, then Expt 2 still positive ---
         assert r["sequential_t1_first"]["step1_decision"] == "treatment"
         assert r["sequential_t1_first"]["step2_effect"] > 0, (
-            f"Expected sequential Expt 2 effect > 0 (low overlap dilutes interaction), "
-            f"got {r['sequential_t1_first']['step2_effect']:.3f}"
+            f"Expected sequential Expt 2 effect > 0 (low overlap dilutes interaction), " f"got {r['sequential_t1_first']['step2_effect']:.3f}"
         )
         assert r["sequential_t1_first"]["final_combination"] == ("treatment", "treatment")
 
@@ -468,9 +458,7 @@ class TestLowOverlap:
         # MEA should rank (c1, t2) best
         deltas = {k: v["delta"] for k, v in mea_effects.items()}
         mea_best = max(deltas, key=deltas.get)
-        assert "control" in mea_best and "treatment" in mea_best, (
-            f"Expected MEA best to be (control, treatment), got {mea_best}"
-        )
+        assert "control" in mea_best and "treatment" in mea_best, f"Expected MEA best to be (control, treatment), got {mea_best}"
 
         # --- Print summary ---
         self._print_summary("LOW OVERLAP (30% trigger, R11 ≈ 9%)", r)
@@ -482,10 +470,12 @@ class TestLowOverlap:
 
         regions = r["region_sizes"]
         total = regions["total"]
-        print(f"\nRegion sizes: R11={regions['R11']} ({100*regions['R11']/total:.1f}%), "
-              f"R10={regions['R10']} ({100*regions['R10']/total:.1f}%), "
-              f"R01={regions['R01']} ({100*regions['R01']/total:.1f}%), "
-              f"R00={regions['R00']} ({100*regions['R00']/total:.1f}%)")
+        print(
+            f"\nRegion sizes: R11={regions['R11']} ({100*regions['R11']/total:.1f}%), "
+            f"R10={regions['R10']} ({100*regions['R10']/total:.1f}%), "
+            f"R01={regions['R01']} ({100*regions['R01']/total:.1f}%), "
+            f"R00={regions['R00']} ({100*regions['R00']/total:.1f}%)"
+        )
 
         ind = r["independent"]
         print("\n1. INDEPENDENT PER-EXPERIMENT:")
@@ -522,10 +512,12 @@ class TestLowOverlap:
             elif delta == min(gt_deltas.values()):
                 tag = " ← WORST"
             print(f"   {combo}: {delta:+.4f}{tag}")
-            print(f"     R10={g['effect_r10']:+d} (w={g['r10_rate']:.3f}), "
-                  f"R01={g['effect_r01']:+d} (w={g['r01_rate']:.3f}), "
-                  f"R11={g['effect_r11']:+d} (w={g['r11_rate']:.3f}), "
-                  f"affected={g['affected_rate']:.3f}")
+            print(
+                f"     R10={g['effect_r10']:+d} (w={g['r10_rate']:.3f}), "
+                f"R01={g['effect_r01']:+d} (w={g['r01_rate']:.3f}), "
+                f"R11={g['effect_r11']:+d} (w={g['r11_rate']:.3f}), "
+                f"affected={g['affected_rate']:.3f}"
+            )
 
         if "mea_effects" in r:
             print("\n4. MEA ESTIMATED EFFECTS (weighted across all regions):")
@@ -576,8 +568,7 @@ class TestHighOverlap:
         # --- Sequential (Expt 1 first): ship t1, Expt 2 effect is NEGATIVE ---
         assert r["sequential_t1_first"]["step1_decision"] == "treatment"
         assert r["sequential_t1_first"]["step2_effect"] < 0, (
-            f"Expected sequential Expt 2 effect < 0 (high overlap reveals interaction), "
-            f"got {r['sequential_t1_first']['step2_effect']:.3f}"
+            f"Expected sequential Expt 2 effect < 0 (high overlap reveals interaction), " f"got {r['sequential_t1_first']['step2_effect']:.3f}"
         )
         # Sequential correctly avoids launching t2
         assert r["sequential_t1_first"]["step2_decision"] == "control"
@@ -612,14 +603,15 @@ class TestHighOverlap:
 
         regions = r["region_sizes"]
         total = regions["total"]
-        print(f"\nRegion sizes: R11={regions['R11']} ({100*regions['R11']/total:.1f}%), "
-              f"R10={regions['R10']} ({100*regions['R10']/total:.1f}%), "
-              f"R01={regions['R01']} ({100*regions['R01']/total:.1f}%), "
-              f"R00={regions['R00']} ({100*regions['R00']/total:.1f}%)")
+        print(
+            f"\nRegion sizes: R11={regions['R11']} ({100*regions['R11']/total:.1f}%), "
+            f"R10={regions['R10']} ({100*regions['R10']/total:.1f}%), "
+            f"R01={regions['R01']} ({100*regions['R01']/total:.1f}%), "
+            f"R00={regions['R00']} ({100*regions['R00']/total:.1f}%)"
+        )
 
         ind = r["independent"]
-        print(f"\n1. CONCURRENT UNIVARIATE: Expt 1 = {ind['univar_expt1']:+.3f}, "
-              f"Expt 2 = {ind['univar_expt2']:+.3f}")
+        print(f"\n1. CONCURRENT UNIVARIATE: Expt 1 = {ind['univar_expt1']:+.3f}, " f"Expt 2 = {ind['univar_expt2']:+.3f}")
         print(f"   Decision: {format_decision(ind['final_combination'])} — STILL WRONG")
 
         seq = r["sequential_t1_first"]
@@ -632,8 +624,7 @@ class TestHighOverlap:
         print("\n3. MEA COMBINATION EFFECTS (weighted across all regions):")
         for combo, delta in sorted(deltas.items(), key=lambda x: -x[1]):
             pct = mea_effects[combo]["delta_percent"]
-            tag = " <- BEST" if delta == max(deltas.values()) else (
-                " <- WORST" if delta == min(deltas.values()) else "")
+            tag = " <- BEST" if delta == max(deltas.values()) else (" <- WORST" if delta == min(deltas.values()) else "")
             print(f"   {combo}: {delta:+.3f} ({pct:+.1f}%){tag}")
 
         print("\n   Sequential gets (t1, c2) -- not optimal (c1, t2) is best,")
@@ -696,6 +687,7 @@ class TestGenerateReport:
 
 def _serialize_results(r):
     """Convert numpy types to Python types for JSON serialization."""
+
     def convert(obj):
         if isinstance(obj, (np.integer,)):
             return int(obj)
@@ -706,4 +698,5 @@ def _serialize_results(r):
         elif isinstance(obj, (list, tuple)):
             return [convert(x) for x in obj]
         return obj
+
     return convert(r)

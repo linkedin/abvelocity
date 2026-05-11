@@ -28,6 +28,7 @@ from abvelocity.core.journey.seq.seq import Seq
 from abvelocity.core.journey.seq.seq_info import FULLY_DEDUPED, UNDEDUPED, SeqInfo
 from abvelocity.core.param.io_param import IOParam
 from abvelocity.core.param.join_query import JoinQuery
+from abvelocity.core.testing.assert_query_is_equal import assert_query_is_equal
 
 
 class JourneySeq(Seq):
@@ -143,3 +144,186 @@ def test_journey_seq_with_gen_all(capfd):
     # SECOND RUN ASSERTIONS
     final_table_name_run2 = seq.seq_info_list[0].output_table_name
     assert final_table_name_run2 == expected_final_name
+
+
+def test_aug_agg_time_pushes_conditions_to_inner_query():
+    """Test that aug_agg_time injects conditions inside the TransformTimeQuery subquery."""
+    seq = deepcopy(JOURNEY_SEQ)
+    seq.time_col_format = "unix_ms"
+    seq.time_unit = "day"
+    seq.gen_all_queries()
+
+    table_name = seq.get_seq_info(FULLY_DEDUPED).output_table_name
+    conditions = ["etl_date >= '2026-03-01-00'", "country_code = 'US'"]
+
+    result_table, _, group_by_cols_w_time = seq.aug_agg_time(table_name=table_name, group_by_cols=[], conditions=conditions)
+
+    expected_subquery = (
+        "(SELECT *,\n"
+        "       DATE_TRUNC('DAY', FROM_UNIXTIME(seq_start_time / 1000.0)) AS agg_time\n"
+        "FROM (rezas_fully_deduped_seq_joined)\n"
+        "WHERE etl_date >= '2026-03-01-00' AND country_code = 'US')"
+    )
+    assert result_table == expected_subquery
+    assert group_by_cols_w_time == ["agg_time"]
+
+
+def test_aug_agg_time_no_conditions_no_where():
+    """Test that aug_agg_time without conditions produces no WHERE clause."""
+    seq = deepcopy(JOURNEY_SEQ)
+    seq.time_col_format = "unix_ms"
+    seq.time_unit = "day"
+    seq.gen_all_queries()
+
+    table_name = seq.get_seq_info(FULLY_DEDUPED).output_table_name
+
+    result_table, _, group_by_cols_w_time = seq.aug_agg_time(table_name=table_name, group_by_cols=[])
+
+    expected_subquery = "(SELECT *,\n" "       DATE_TRUNC('DAY', FROM_UNIXTIME(seq_start_time / 1000.0)) AS agg_time\n" "FROM (rezas_fully_deduped_seq_joined))"
+    assert result_table == expected_subquery
+    assert group_by_cols_w_time == ["agg_time"]
+
+
+def test_gen_seq_summary_query_pushes_conditions_with_group_by_time():
+    """Test that gen_seq_summary_query pushes conditions to the inner subquery
+    when group_by_time=True, so Trino can push predicates to the table scan."""
+    seq = deepcopy(JOURNEY_SEQ)
+    seq.time_col_format = "unix_ms"
+    seq.time_unit = "day"
+    seq.delta_time_unit = "minute"
+    seq.gen_all_queries()
+
+    conditions = ["etl_date >= '2026-03-01-00'", "pm_pagekey = 'desktop'"]
+
+    calc_res = seq.gen_seq_summary_query(
+        deduping_method=FULLY_DEDUPED,
+        count_distinct_col="memberid",
+        group_by_time=True,
+        conditions=conditions,
+    )
+
+    expected_query = """
+        SELECT agg_time,
+               COUNT(DISTINCT memberid) AS seq_count,
+               AVG(seq_length) AS avg_seq_length,
+               AVG(DATE_DIFF('MINUTE', FROM_UNIXTIME(seq_start_time / 1000.0),
+                   FROM_UNIXTIME(seq_end_time / 1000.0))) AS avg_seq_time
+        FROM (SELECT *,
+                     DATE_TRUNC('DAY', FROM_UNIXTIME(seq_start_time / 1000.0)) AS agg_time
+              FROM (rezas_fully_deduped_seq_joined)
+              WHERE etl_date >= '2026-03-01-00' AND pm_pagekey = 'desktop')
+        GROUP BY agg_time
+    """
+    assert_query_is_equal(calc_res.query, expected_query)
+
+
+def test_gen_seq_summary_query_conditions_at_outer_when_no_group_by_time():
+    """Test that when group_by_time=False, conditions stay in the outer WHERE clause."""
+    seq = deepcopy(JOURNEY_SEQ)
+    seq.time_col_format = "unix_ms"
+    seq.time_unit = "day"
+    seq.delta_time_unit = "minute"
+    seq.gen_all_queries()
+
+    conditions = ["etl_date >= '2026-03-01-00'"]
+
+    calc_res = seq.gen_seq_summary_query(
+        deduping_method=FULLY_DEDUPED,
+        count_distinct_col="memberid",
+        group_by_time=False,
+        conditions=conditions,
+    )
+
+    expected_query = """
+        SELECT COUNT(DISTINCT memberid) AS seq_count,
+               AVG(seq_length) AS avg_seq_length,
+               AVG(DATE_DIFF('MINUTE', FROM_UNIXTIME(seq_start_time / 1000.0),
+                   FROM_UNIXTIME(seq_end_time / 1000.0))) AS avg_seq_time
+        FROM rezas_fully_deduped_seq_joined
+        WHERE etl_date >= '2026-03-01-00'
+    """
+    assert_query_is_equal(calc_res.query, expected_query)
+
+
+def test_calc_conversion_pushes_conditions_with_group_by_time():
+    """Test that calc_conversion pushes conditions into the inner subquery
+    when group_by_time=True, so Trino can push predicates to the table scan."""
+    seq = deepcopy(JOURNEY_SEQ)
+    seq.time_col_format = "unix_ms"
+    seq.time_unit = "day"
+    seq.io_param = None
+    seq.gen_all_queries()
+
+    conditions = ["etl_date >= '2026-03-01-00'", "country_code = 'US'"]
+
+    calc_res = seq.calc_conversion(
+        numerator_list=["page_view", "page_click"],
+        denominator_list=["page_view"],
+        require_all_numerator=True,
+        count_distinct_col="user",
+        conditions=conditions,
+        group_by_cols=[],
+        group_by_time=True,
+        deduping_method=FULLY_DEDUPED,
+    )
+
+    expected_query = """
+        SELECT agg_time,
+               COUNT(DISTINCT CASE WHEN CARDINALITY(ARRAY_INTERSECT(event_seq,
+                   ARRAY['page_view', 'page_click'])) = 2
+                   THEN user ELSE NULL END) AS numer_count,
+               COUNT(DISTINCT CASE WHEN CARDINALITY(ARRAY_INTERSECT(event_seq,
+                   ARRAY['page_view'])) > 0
+                   THEN user ELSE NULL END) AS denom_count,
+               CAST(COUNT(DISTINCT CASE WHEN CARDINALITY(ARRAY_INTERSECT(event_seq,
+                   ARRAY['page_view', 'page_click'])) = 2
+                   THEN user ELSE NULL END) AS DOUBLE)
+               / NULLIF(COUNT(DISTINCT CASE WHEN CARDINALITY(ARRAY_INTERSECT(event_seq,
+                   ARRAY['page_view'])) > 0
+                   THEN user ELSE NULL END), 0) AS conversion_rate
+        FROM (SELECT *,
+                     DATE_TRUNC('DAY', FROM_UNIXTIME(seq_start_time / 1000.0)) AS agg_time
+              FROM (rezas_fully_deduped_seq_joined)
+              WHERE etl_date >= '2026-03-01-00' AND country_code = 'US')
+        GROUP BY agg_time
+    """
+    assert_query_is_equal(calc_res.query, expected_query)
+
+
+def test_calc_conversion_conditions_at_outer_when_no_group_by_time():
+    """Test that when group_by_time=False, conditions stay in the outer WHERE clause."""
+    seq = deepcopy(JOURNEY_SEQ)
+    seq.time_col_format = "unix_ms"
+    seq.time_unit = "day"
+    seq.io_param = None
+    seq.gen_all_queries()
+
+    conditions = ["etl_date >= '2026-03-01-00'"]
+
+    calc_res = seq.calc_conversion(
+        numerator_list=["page_view"],
+        denominator_list=["page_view"],
+        count_distinct_col="user",
+        conditions=conditions,
+        group_by_cols=[],
+        group_by_time=False,
+        deduping_method=FULLY_DEDUPED,
+    )
+
+    expected_query = """
+        SELECT COUNT(DISTINCT CASE WHEN CARDINALITY(ARRAY_INTERSECT(event_seq,
+                   ARRAY['page_view'])) > 0
+                   THEN user ELSE NULL END) AS numer_count,
+               COUNT(DISTINCT CASE WHEN CARDINALITY(ARRAY_INTERSECT(event_seq,
+                   ARRAY['page_view'])) > 0
+                   THEN user ELSE NULL END) AS denom_count,
+               CAST(COUNT(DISTINCT CASE WHEN CARDINALITY(ARRAY_INTERSECT(event_seq,
+                   ARRAY['page_view'])) > 0
+                   THEN user ELSE NULL END) AS DOUBLE)
+               / NULLIF(COUNT(DISTINCT CASE WHEN CARDINALITY(ARRAY_INTERSECT(event_seq,
+                   ARRAY['page_view'])) > 0
+                   THEN user ELSE NULL END), 0) AS conversion_rate
+        FROM rezas_fully_deduped_seq_joined
+        WHERE etl_date >= '2026-03-01-00'
+    """
+    assert_query_is_equal(calc_res.query, expected_query)
