@@ -37,15 +37,31 @@ class UMetricsQuery:
         query: The query to get the metric data.
     """
 
-    def __init__(self, table_name: str, date_col: str):
+    def __init__(
+        self,
+        table_name: str,
+        date_col: str,
+        pad_zero_hour_suffix: bool = False,
+    ):
         """
         Args:
             table_name: The name of the table to get the metric data from.
             date_col: The name of the date column in the metric table.
-            This column then will be used to join with the experiment assignment table or other ana
+                This column then will be used to join with the experiment assignment table or other ana
+            pad_zero_hour_suffix: Set ``True`` when ``date_col``
+                stores values in the ``YYYY-MM-DD-HH`` format with
+                the hour suffix fixed at ``-00`` (e.g. daily-grain
+                hour-partitioned tables, common in many Hadoop/Hive
+                conventions). When ``True``, the BETWEEN bounds are
+                padded with ``-00`` to keep the upper end inclusive
+                — without this, ``'2026-04-30-00' > '2026-04-30'``
+                lexicographically and the entire end-date partition
+                silently drops out of the result. Default ``False``
+                (plain DATE columns).
         """
         self.table_name = table_name
         self.date_col = date_col
+        self.pad_zero_hour_suffix = pad_zero_hour_suffix
         self.query = None
 
     def construct(
@@ -90,7 +106,21 @@ class UMetricsQuery:
                 columns.extend(dims)
             aggregations = [(f"COUNT(DISTINCT {u.col}) AS {u.name}" if u.agg == "COUNT_DISTINCT" else f"{u.agg}({u.col}) AS {u.name}") for u in u_metrics]
 
-        time_condition = f"""{self.date_col} BETWEEN '{start_date}' AND '{end_date}'"""
+        # When ``self.date_col`` is an hour-suffix partition column
+        # (values shaped ``'YYYY-MM-DD-HH'`` with a fixed ``-00``
+        # suffix on daily-grain tables), a naive ``BETWEEN '<start>'
+        # AND '<end>'`` silently drops the end-date partition:
+        # lexicographically ``'2026-04-30-00' > '2026-04-30'``. Pad
+        # both bounds with ``-00`` so the BETWEEN matches the
+        # partition format exactly and remains inclusive on both
+        # ends. Plain DATE columns (``pad_zero_hour_suffix=False``)
+        # keep the unmodified bounds — ``BETWEEN '2024-01-01' AND
+        # '2024-01-31'`` against a DATE column is naturally inclusive
+        # on both ends.
+        if self.pad_zero_hour_suffix:
+            time_condition = f"""{self.date_col} BETWEEN '{start_date}-00' AND '{end_date}-00'"""
+        else:
+            time_condition = f"""{self.date_col} BETWEEN '{start_date}' AND '{end_date}'"""
         conditions = [time_condition]
 
         if condition is not None:
