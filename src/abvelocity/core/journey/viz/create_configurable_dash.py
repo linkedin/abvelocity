@@ -32,7 +32,7 @@ __all__ = ["ParameterSpec"]
 # Base URL for the dashboard app_link. Factored out so it can be overridden
 # (monkey-patched or swapped by the OSS transform) without touching the
 # URL-building site in __init__.
-DASHBOARD_BASE_URL = "https://jupyter-grid1.grid.blah.com"
+DASHBOARD_BASE_URL = ""
 
 # -----------------------------
 # Parameter + Cell Definitions (Static / no dynamic context)

@@ -68,6 +68,7 @@ from abvelocity.core.stats.two_sample_t_test import two_sample_t_test
 # from abvelocity.core.utils.calc_freq import calc_freq
 from abvelocity.core.utils.df_to_html import df_to_html
 from abvelocity.core.utils.plot_compare_variants import plot_compare_variants
+from abvelocity.core.utils.print_to_html import deterministic_plotly_div_id
 from abvelocity.core.mea.assumption_check import check_trigger_invariance
 from abvelocity.core.mea.metric_interaction import check_metric_interaction
 from abvelocity.core.utils.plot_conditional_variant_dist import plot_conditional_variant_dist
@@ -484,23 +485,29 @@ class MEA:
                     trigger_state_count_df0 = trigger_state_count_df.copy()
                     trigger_state_count_df0.reset_index(inplace=True)
                     html_str += "<h3>Experiments' triggering overlap</h3>"
-                    html_str += plot_variants(
+                    trigger_overlap_fig = plot_variants(
                         df=trigger_state_count_df0,
                         variant_col=TRIGGER_STATE_COL,
                         count_column=TRIGGER_STATE_PERCENT_COL,
                         dim_names=dim_names,
-                    ).to_html()
+                    )
+                    html_str += trigger_overlap_fig.to_html(
+                        div_id=deterministic_plotly_div_id(figure=trigger_overlap_fig),
+                    )
 
                 if variant_count_df is not None:
                     variant_count_df0 = variant_count_df.copy()
                     variant_count_df0.reset_index(inplace=True)
                     html_str += "<h3>Experiments' variant overlap</h3>"
-                    html_str += plot_variants(
+                    variant_overlap_fig = plot_variants(
                         df=variant_count_df0,
                         variant_col=VARIANT_COL,
                         count_column=VARIANT_PERCENT_COL,
                         dim_names=dim_names,
-                    ).to_html()
+                    )
+                    html_str += variant_overlap_fig.to_html(
+                        div_id=deterministic_plotly_div_id(figure=variant_overlap_fig),
+                    )
 
         # Here we generate figures for variant counts / trigger state counts
         # This is only done if dimension is greater than 1 (conditional distribution is meaningful for D >= 2)
@@ -525,7 +532,7 @@ class MEA:
                 )
                 for idx, fig in conditional_figs_trigger.items():
                     html_str += f"<h4>Conditional Trigger Percent Distribution: Fixed by {dim_names[idx-1]}</h4>"
-                    html_str += fig.to_html()
+                    html_str += fig.to_html(div_id=deterministic_plotly_div_id(figure=fig))
             """
             # --- Conditional Variant Overlap ---
             if variant_count_df is not None:
@@ -542,7 +549,7 @@ class MEA:
 
                 for idx, fig in conditional_figs_variant.items():
                     html_str += f"<h4>Conditional Variant (Unit Count) Distribution: Fixed by {dim_names[idx-1]}</h4>"
-                    html_str += fig.to_html()
+                    html_str += fig.to_html(div_id=deterministic_plotly_div_id(figure=fig))
 
                 # --- MEA Arm-Trigger Invariance check ---
                 # K joint tests (one per source): tests whether the source arm shifts the
@@ -605,8 +612,7 @@ class MEA:
                             f"Bonferroni α={invar_result.by_pair[(0, 1)].alpha_bonferroni:.4f})</summary>"
                             "<table border='1' cellpadding='4' cellspacing='0' style='border-collapse:collapse'>"
                             "<tr><th>Pair (source → target)</th><th>Result</th>"
-                            "<th>χ²</th><th>p_value</th><th>Cramér's V</th><th>N</th></tr>"
-                            + pair_rows + "</table></details>"
+                            "<th>χ²</th><th>p_value</th><th>Cramér's V</th><th>N</th></tr>" + pair_rows + "</table></details>"
                         )
                     except Exception as e:
                         html_str += f"<p>Arm-Trigger Invariance check unavailable: {e}</p>"
@@ -735,8 +741,16 @@ class MEA:
             metric_figs_path_int = f"{write_path}/variant_combo_metric_figs/"
             os.makedirs(metric_figs_path_int, exist_ok=True)
             for safe_metric, safe_pair, means_fig, residuals_fig in interaction_figs_to_write:
-                means_fig.write_html(f"{metric_figs_path_int}/{safe_metric}_{safe_pair}_interaction_means.html", include_plotlyjs="cdn")
-                residuals_fig.write_html(f"{metric_figs_path_int}/{safe_metric}_{safe_pair}_interaction_residuals.html", include_plotlyjs="cdn")
+                means_fig.write_html(
+                    f"{metric_figs_path_int}/{safe_metric}_{safe_pair}_interaction_means.html",
+                    include_plotlyjs="cdn",
+                    div_id=deterministic_plotly_div_id(figure=means_fig),
+                )
+                residuals_fig.write_html(
+                    f"{metric_figs_path_int}/{safe_metric}_{safe_pair}_interaction_residuals.html",
+                    include_plotlyjs="cdn",
+                    div_id=deterministic_plotly_div_id(figure=residuals_fig),
+                )
 
         if mea_result is None:
             print(
@@ -895,7 +909,11 @@ class MEA:
 
                 for metric, fig in figs.items():
                     html_path = f"{metric_figs_path}/{metric}_variant_mean_sd_diagnostics.html"
-                    fig.write_html(str(html_path), include_plotlyjs="cdn")
+                    fig.write_html(
+                        str(html_path),
+                        include_plotlyjs="cdn",
+                        div_id=deterministic_plotly_div_id(figure=fig),
+                    )
             else:
                 warnings.warn(
                     "\n*** In `mea.publish`: we attempted to create metric diagnostic figs. "

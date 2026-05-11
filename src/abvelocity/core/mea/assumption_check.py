@@ -313,10 +313,7 @@ class ArmTriggerInvarianceResult:
     def __str__(self) -> str:
         src_status = "PASS" if self.passed_by_source else "FLAG"
         pair_status = "PASS" if self.passed_by_pair else "FLAG"
-        lines = [
-            f"[{src_status}] MEA Arm-Trigger Invariance — {self.n_sources} source test(s) | "
-            f"pairwise [{pair_status}]"
-        ]
+        lines = [f"[{src_status}] MEA Arm-Trigger Invariance — {self.n_sources} source test(s) | " f"pairwise [{pair_status}]"]
         for sr in self.by_source.values():
             lines.append("  " + str(sr))
         if self.by_pair:
@@ -415,9 +412,7 @@ def _build_source_joint_table(
     other_indices = [i for i in range(n_expts) if i != source_idx]
 
     df["_source"] = df[variant_col].map(lambda v: v[source_idx])
-    df["_other"] = df[variant_col].map(
-        lambda v: "|".join(str(v[i]) for i in other_indices)
-    )
+    df["_other"] = df[variant_col].map(lambda v: "|".join(str(v[i]) for i in other_indices))
 
     aggregated = df.groupby(["_source", "_other"])[count_col].sum().reset_index()
 

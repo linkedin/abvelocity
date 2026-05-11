@@ -381,10 +381,7 @@ def simulate_3_expt_variant_count_df(n_members=30000, seed=0):
     treat_rate = 0.5
 
     triggered = [rng.random(n_members) < rate for rate in trigger_rates]
-    variants = [
-        np.where(trig, np.where(rng.random(n_members) < treat_rate, "treat", "ctrl"), CATEG_NAN_VALUE)
-        for trig in triggered
-    ]
+    variants = [np.where(trig, np.where(rng.random(n_members) < treat_rate, "treat", "ctrl"), CATEG_NAN_VALUE) for trig in triggered]
 
     in_analysis = triggered[0] | triggered[1] | triggered[2]
     df_members = pd.DataFrame(
